@@ -2,6 +2,8 @@
 
 三组 AI 辅助绘画作品的静态展示站。无框架、无 CDN、无追踪，直接用浏览器打开 `index.html` 即可。
 
+在线访问：<https://tewhac-china.github.io/MyOnlineArtExhibition/>
+
 ```
 index.html            首页（展名 / 三个系列 / 两种范式 / 介入维度说明 / 字体与来源说明）
 comfyui.html          01 舞台与少女 —— MyFavourite_HighQuality（74 张，扩散模型，按主题 / 按版本双视图）
@@ -79,9 +81,18 @@ python build/subset_fonts.py
 
 - 数据文件里不含源目录的绝对路径（构建时就不写入）；
 - 页面页脚只描述作品，不列目录；
-- 展示用的文件名字段只保留原始文件名，不含盘符或目录层级。
+- 展示用的文件名字段只保留原始文件名，不含盘符或目录层级；
+- 构建脚本也不含本机路径 —— 源目录读自 `build/sources.local.json`，该文件已被 gitignore。
 
 如需再确认，可执行：`grep -rn "[A-Z]:" *.html assets/data/*.js`，应无命中。
+
+## 部署到 GitHub Pages
+
+仓库设置里 Pages 来源为 `Deploy from a branch` → 分支 `main` / 目录 `/`。
+站点根目录有 `.nojekyll`，Pages 会原样静态服务，不走 Jekyll 构建（否则下划线开头的文件会被跳过）。
+
+改完内容 `git push` 即自动重新发布，通常一分钟内生效。所有资源引用都是相对路径，
+所以子路径 `/<仓库名>/` 与自定义域名都能直接工作，无需配置 baseurl。
 
 ## 一个必须说清楚的区别
 
