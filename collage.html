@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>千禧迷思 · Millennium Myth</title>
+<meta name="description" content="六帧程序化拼贴封面：5312×8704 原生 8K 渲染，无扩散模型，无后期。">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="theme-collage">
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand__mark"></span>
+    <span class="brand__text"><b>笔触的来处</b> &nbsp;/&nbsp; ONLINE EXHIBITION</span>
+  </a>
+  <nav class="nav">
+    <a href="index.html">首页</a>
+    <a href="comfyui.html"><span class="idx">01</span>舞台与少女</a>
+    <a href="collage.html" class="is-active"><span class="idx">02</span>千禧迷思</a>
+    <a href="backgrounds.html"><span class="idx">03</span>东方纯背景</a>
+  </nav>
+</header>
+
+<main>
+  <section class="series-hero">
+    <div class="series-hero__bg" id="heroBg"></div>
+    <div class="series-hero__in">
+      <div class="kicker">系列 02 / 03 · 程序化合成 · 代码作画</div>
+      <h1>千禧迷思</h1>
+      <p class="latin">Millennium Myth &nbsp;·&nbsp; Procedural Collage</p>
+      <p class="lede">
+        从一段 83 秒的参考动画里拆出层序，用 Python 重新搭一遍。六帧，没有一张用扩散模型，
+        没有任何像素是「生成」的 —— 环线、飞鸟、色块、贴纸框、每一个字的位置，都是代码算出来、画上去的。
+      </p>
+      <div class="statrow">
+        <div><b>6</b><span>帧</span></div>
+        <div><b>5312 × 8704</b><span>原生 8K</span></div>
+        <div><b>664 × 1088</b><span>设计稿</span></div>
+        <div><b>0</b><span>次 PS</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= 生成方式 -->
+  <section class="block" id="how">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">01 / PIPELINE</div>
+        <div>
+          <h2>生成方式</h2>
+          <p>渲染内核是一个 Python 脚本（Pillow + NumPy），没有模型推理。参考片真正值得学的不是它的画面，
+            而是它的<strong>层序</strong> —— 先立可读的形，再用照片供质感，强调色定量进场，文字最后落。</p>
+        </div>
+      </div>
+
+      <dl class="facts rise">
+        <div><dt>渲染器</dt><dd>gen_aya_collage.py<small> · Pillow + NumPy，参数化管线</small></dd></div>
+        <div><dt>输出</dt><dd>664 × 1088 设计稿<small> / 5312 × 8704 原生 8K（长边已过 8K）</small></dd></div>
+        <div><dt>参考</dt><dd>83 秒参考动画<small> · 664×1088 / 29.97fps / 2481 帧，6fps 抽 497 帧分析层序</small></dd></div>
+        <div><dt>色轴</dt><dd>92% 消色 + 6% 紫罗兰<small> · H≈262° / S≈0.35 / L≈0.65</small></dd></div>
+        <div><dt>字体</dt><dd>京华老宋体 v3.0<small> · 全套同一支，fontTools 比对 cmap 零缺字</small></dd></div>
+        <div><dt>文字可见性</dt><dd>WCAG 对比度 3.1 – 8.1<small> · 明度反极 + 二维择地，全程无底板</small></dd></div>
+        <div><dt>扩散模型</dt><dd>无<small> · 立绘试过后删除，理由是一比就露馅</small></dd></div>
+        <div><dt>后期</dt><dd>无<small> · 原生渲染直出</small></dd></div>
+      </dl>
+
+      <div class="two-col">
+        <div class="prose rise">
+          <p><strong>色轴是一条纪律。</strong>所有照片底、文字、飞鸟、弧线统一去色到 0–15% 饱和，明度压在 0.15–0.75；
+            紫罗兰只出现在色块、波纹填充与少量波形线上。这是「限制即风格」：把颜色配额几乎全押在一个强调色上，
+            画面立刻从「照片堆」变成「设计」。</p>
+          <p><strong>8K 不是放大。</strong>整套管线参数化，几何、字号、线宽、模糊半径、网点步长全部乘一个系数 S。
+            三处会随解析度走形的东西必须一起修，否则高分辨率反而露馅：扫描线频率要固定在设计高度、颗粒要按设计尺寸生成
+            再平滑放大、小字要改成二维择地。原生与放大的结构边缘强度差 61–81% —— 这是可以验收的客观差距，不是感觉。</p>
+          <p><strong>文字不加底板。</strong>第一版给每个字加半透明垫，分数是达标了，但字从「长在画面里」变成「贴在画面上」，
+            于是全部撤掉。正解是参考片本来就在用的两条：<strong>明度反极</strong>（落字处亮就下黑字、暗就下白字）与
+            <strong>择地而居</strong>（在允许的窗口里扫位置，挑对比度最高的一条）。</p>
+          <p><strong>一个被反复修正的教训。</strong>低清版与 8K 版必须是同一幅画。最初有三处会偷偷换内容 ——
+            放大倍率过高就自动换素材、噪声网格按当前分辨率生成、择地步长按渲染像素计。全部改成在设计尺度上算之后，
+            两批之间的最大偏差降到 6px（画布的 0.6%）。</p>
+        </div>
+
+        <div class="skeleton rise">
+          <h4>层序 · 参考片拆解出的搭建顺序</h4>
+          <ol>
+            <li><b>成片定帧</b>　先给结果，再清空重来</li>
+            <li><b>波纹场 + 人物剪影</b>　先定「能量场」与主体位置</li>
+            <li><b>同心细线 + 网格 + 波形线</b>　灰底，照片尚未进场</li>
+            <li><b>城市照片淡入</b>　压暗去色；波纹改淡紫水彩 + 白描边</li>
+            <li><b>紫色块 / 飞鸟 / 贴纸框 / 情绪小字 / 轨道弧</b>　逐样加入</li>
+            <li><b>人物</b>　剪影 → 线稿 → 局部 → 全彩（本系列最终删除）</li>
+            <li><b>文字层</b>　重复带 / 竖排句 / 主标题 / 底部带</li>
+            <li><b>后期层</b>　颗粒 / 扫描线 / 暗角，统一施加</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= 人类介入 -->
+  <section class="block" id="human">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">02 / HUMAN INPUT</div>
+        <div>
+          <h2>人类介入的程度</h2>
+          <p>这一组的介入密度是三个系列里最高的 —— 因为它本来就不是「许愿」，而是写代码。
+            人写下的是几何、色轴、层序，以及每一个字落在哪里。</p>
+        </div>
+      </div>
+
+      <div class="rise">
+        <div class="dim">
+          <div class="dim__name">概念与文案<small>CONCEPT &amp; COPY</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>5 / 5</span></div>
+            <p class="dim__note">系列定名《千禧迷思》，六帧的锚点 / 分界带 / 竖排句 / 情绪表 / 底部带 / 印章一一咬合，
+              全部逐字重写。基调还被明确校准过一次：是<b>迷思</b>不是丧，收尾不能写成认命，问题要悬著、人不颓。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">代码与参数<small>CODE</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>5 / 5</span></div>
+            <p class="dim__note">渲染器逐层手写：环数、手绘抖动、水彩浓度、飞鸟数、贴纸编号、各段文字的择地窗口，
+              全部是代码里的具体数字。改一个参数，六帧一起变 —— 这是「画」的层级，不是「调」的层级。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">素材与数据<small>MATERIALS</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><span>3 / 5</span></div>
+            <p class="dim__note">素材库照片（去色、提对比、压暗、按放大倍率补糊）、字体 cmap 比对。素材本身是拿来的，
+              不是生成的 —— 这也是它能把「照片感」做对的原因。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">筛选与迭代<small>CURATION</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>5 / 5</span></div>
+            <p class="dim__note">三套验收同时跑：影调与配色指标（V / S / purple / edge 对照参考值）、字体可见性审计
+              （探针模式只画背景，差异像素即墨迹，算 WCAG 对比度）、8K 与低清一致性验收。每一轮只改一处主因。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">像素级后期<small>RETOUCH</small></div>
+          <div class="dim__body">
+            <div class="meter"><i></i><i></i><i></i><i></i><i></i><span>0 / 5</span></div>
+            <p class="dim__note"><b>原生渲染直出。</b>不存在「导出后再修」这一步 —— 修图的活全部被前移到了渲染器里，
+              以参数与算法的形式存在。</p>
+          </div>
+        </div>
+      </div>
+
+      <blockquote class="verdict rise">
+        介入度：<b>极高</b>。这一组更接近「用代码画画」，而不是「向模型许愿」。
+        它同时也是唯一一个完全不含扩散模型的系列 —— 没有任何像素是 AI 画的，AI 参与的是渲染器的代码与文案。
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- ================================================= 作品 -->
+  <section class="block" id="works">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">03 / WORKS</div>
+        <div>
+          <h2>六帧</h2>
+          <p>同一个系列标题反复出现在每一帧上（对应参考片的 Z.A.T.O 用法），六个图形锚点各承担一个问题。
+            灯箱里的大图取自 5312×8704 的 8K 原生档。</p>
+        </div>
+      </div>
+      <div class="wall" id="wall" style="--ar:0.6103"></div>
+
+      <figure class="rise" id="proc" style="margin:56px 0 0"></figure>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="foot__in">
+    <div>
+      <h5>关于这一组</h5>
+      <p>六帧，每帧都有 664×1088 设计稿与 5312×8704 原生 8K 两个输出；另有中间稿记录逐层搭建的过程。</p>
+      <p>本站展示的大图取自 8K 原生渲染，未做任何裁切或修图。</p>
+    </div>
+    <div>
+      <h5>本页字体</h5>
+      <p>标题 · 京华老宋体</p>
+      <p>正文 · 思源黑体</p>
+    </div>
+    <div>
+      <h5>系列</h5>
+      <p><a href="comfyui.html">← 01 舞台与少女</a></p>
+      <p><a href="backgrounds.html">03 东方纯背景 →</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/data/collage.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const { $, esc, wall, LB } = Site;
+  const D = window.__DATA_COLLAGE;
+  const items = D.items.map(it => ({ ...it, sub: it.stem, badge: "8K" }));
+
+  $("#heroBg").style.backgroundImage = `url("${items[0].large}")`;
+
+  const cfg = {
+    rows: it => [
+      ["图形锚点", it.anchor],
+      ["分界带", it.band],
+      ["竖排句", it.vertical],
+      ["情绪表", it.emotion],
+      ["底部带", it.bottom],
+      ["印章", it.seal],
+      ["影调评分", `${it.score}（越低越近参考）`],
+      ["8K 输出", it.big],
+      ["设计稿", `${it.w} × ${it.h}`],
+      ["原始档", it.file]
+    ]
+  };
+  wall($("#wall"), items, cfg);
+
+  // 流程复刻图
+  if (D.extra && D.extra.length) {
+    const p = D.extra[0];
+    $("#proc").innerHTML = `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:clamp(20px,4vw,54px);align-items:center">
+        <img src="${p.large}" alt="${esc(p.title)}" style="width:100%;border:1px solid var(--line)" loading="lazy">
+        <figcaption>
+          <div class="kicker" style="margin-bottom:16px">层序复刻 · RENDER ORDER</div>
+          <h3 style="font-family:var(--f-display);font-weight:400;font-size:clamp(22px,2.6vw,30px);letter-spacing:.08em;margin:0 0 14px">${esc(p.title)}</h3>
+          <p style="color:var(--muted);font-size:13.5px;line-height:1.95;margin:0">
+            左图是把参考片的层序照搬一遍的对照稿：波纹场先铺满，剪影居中，照片最后进场且压到最暗。
+            这张图本身就是方法论 —— 它证明了「顺序」是可以被复制的，而「画面」不必。
+          </p>
+        </figcaption>
+      </div>`;
+  }
+
+  Site.reveals();
+})();
+</script>
+</body>
+</html>

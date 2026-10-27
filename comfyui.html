@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>舞台与少女 · My Favourite High Quality</title>
+<meta name="description" content="Qwen-Image 2.1 Turbo 纯提示词系列：74 张、28 轮迭代、零像素后期。">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="theme-comfy">
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand__mark"></span>
+    <span class="brand__text"><b>笔触的来处</b> &nbsp;/&nbsp; ONLINE EXHIBITION</span>
+  </a>
+  <nav class="nav">
+    <a href="index.html">首页</a>
+    <a href="comfyui.html" class="is-active"><span class="idx">01</span>舞台与少女</a>
+    <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
+    <a href="backgrounds.html"><span class="idx">03</span>东方纯背景</a>
+  </nav>
+</header>
+
+<main>
+  <section class="series-hero">
+    <div class="series-hero__bg" id="heroBg"></div>
+    <div class="series-hero__in">
+      <div class="kicker">系列 01 / 03 · 扩散模型 · 纯提示词</div>
+      <h1>舞台与少女</h1>
+      <p class="latin">My Favourite High Quality &nbsp;·&nbsp; Qwen-Image 2.1 Turbo</p>
+      <p class="lede">
+        一个模型、一条固定的 sigma 曲线、一段手写提示词，2048×1408 出图后降采样，然后结束。
+        没有第二个模型、没有 ControlNet、没有后期。要复刻的是「日本动画 MV 截帧」那种细线厚涂的画法 ——
+        28 轮迭代之后，这件事只在提示词里成立。
+      </p>
+      <div class="statrow">
+        <div><b>74</b><span>张存档</span></div>
+        <div><b>28</b><span>轮迭代</span></div>
+        <div><b>8 / 16</b><span>步采样</span></div>
+        <div><b>0</b><span>次像素后期</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= 生成方式 -->
+  <section class="block" id="how">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">01 / PIPELINE</div>
+        <div>
+          <h2>生成方式</h2>
+          <p>单模型直出。每一张 PNG 内嵌完整的 <code>prompt</code> 元数据，提示词、种子、步数、cfg、模型名都可逐张回读 ——
+            下面的事实表是这批图的共同底座，个别图的差异记在灯箱里。</p>
+        </div>
+      </div>
+
+      <dl class="facts rise">
+        <div><dt>模型</dt><dd>qwen_image_2.1_turbo_bf16<small>.safetensors</small></dd></div>
+        <div><dt>文本编码</dt><dd>qwen3vl_8b_int8_convrot<small> · type qwen_image</small></dd></div>
+        <div><dt>VAE</dt><dd>qwen_image_2.1_vae_bf16</dd></div>
+        <div><dt>采样</dt><dd>euler + ManualSigmas<small> · 8 步固定曲线，后期插值 12 / 16 步</small></dd></div>
+        <div><dt>CFG</dt><dd>1.0<small> · 实测 2.0 会把布料拉平且慢一倍</small></dd></div>
+        <div><dt>尺寸</dt><dd>2048 × 1408 → 1578 × 1080<small> · LANCZOS 降采样</small></dd></div>
+        <div><dt>硬件</dt><dd>RTX 2080Ti 22G<small> · 8 步约 175s / 张，16 步约 355s / 张</small></dd></div>
+        <div><dt>后期</dt><dd>无<small> · 不调色、不加颗粒、不锐化</small></dd></div>
+      </dl>
+
+      <div class="two-col">
+        <div class="prose rise">
+          <p>提示词不是一句话，是一套七段的结构：<strong>画法 → 机位 → 角色锚点 → 姿势 → 塑形 → 绘画质感 → 光 → 轮廓光 → 中间调锚点 → 色调 → 收尾</strong>。
+            每一段都是为了堵一个具体的失败模式，不是为了写得好看。</p>
+          <p>最贵的三条经验，全部是踩出来的：<strong>细线不是粗墨线</strong> —— 写 <code>bold ink outlines</code> 会直接出矢量图；
+            <strong>黑裙必须写成「深炭灰 + 紫蓝反光」</strong> —— 否则模型给一块纯黑剪影，这是人物细节差的最大来源；
+            <strong>「整体逆光」写不得</strong> —— Qwen 会把整张图一起压暗（edge 0.128 → 0.066），轮廓光只能用加法的。</p>
+          <p>28 轮迭代，被推翻的路线有三条：半写实 CG（太像 3D 动画电影，不是手绘）、平涂矢量（纯色块 + 硬边 + 零纹理）、
+            以及 14 步后期调色流水线 —— 能出效果，但结论是「全都是在补提示词的债」，之后整条推翻。
+            定稿的 v23 配方只做三件事：中间调锚点、黑裙不黑、填满画面。</p>
+          <p><strong>已知局限，别在这上面浪费时间。</strong>Qwen 给不出真正的手绘颗粒（<code>oil impasto</code>、<code>gouache</code>、
+            <code>canvas weave</code> 这类材质词完全无效，出图与不加一模一样）；整体偏暗一档（p50 0.09–0.24，参考中位数 0.258）；
+            参考图通道在 16 步 / 2048 下会 OOM，要锁身份只能用 8–12 步。</p>
+        </div>
+
+        <div class="skeleton rise">
+          <h4>提示词骨架 · 七段结构</h4>
+          <ol>
+            <li><b>HEAD 画法</b>　a frame from a Japanese animated music video, thin dark line art defining each form…</li>
+            <li><b>机位</b>　EXTREME WIDE ANGLE 14mm / camera at ground level / 前景塞一个巨大的近物</li>
+            <li><b>角色锚点</b>　六个识别点：金发波浪、左玫瑰发夹、右黑发卡、金瞳、紫缎带蝴蝶结、紫短靴</li>
+            <li><b>姿势</b>　拆成躯干 / 腿 / 头 / 末端四个部位，抽象词无效</li>
+            <li><b>塑形</b>　每个形体都要有明暗转折；黑裙 = 深炭灰 + 紫蓝反光</li>
+            <li><b>绘画质感</b>　这是画不是渲染；画面任何一处都不许有大片平滑空白</li>
+            <li><b>光</b>　有来源、有衰减、有白热核心</li>
+            <li><b>轮廓光</b>　加法，不掉曝光</li>
+            <li><b>中间调锚点</b>　中间调三十灰，暗部不超过三分之一</li>
+            <li><b>色调 / 收尾</b>　muted film grade · bloom · grain · cinematic composition</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="lineage rise" id="lineage"></div>
+    </div>
+  </section>
+
+  <!-- ================================================= 人类介入 -->
+  <section class="block" id="human">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">02 / HUMAN INPUT</div>
+        <div>
+          <h2>人类介入的程度</h2>
+          <p>五个维度逐项打分（0–5）。这个系列的形状很特别：前四项接近满分，最后一项是零 ——
+            所有介入都发生在「说话」与「挑选」，没有一笔落在像素上。</p>
+        </div>
+      </div>
+
+      <div class="rise">
+        <div class="dim">
+          <div class="dim__name">概念与选题<small>CONCEPT</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>4 / 5</span></div>
+            <p class="dim__note">角色的六个识别点、二十来个场景（舞台、剧场、花园、屋顶、镜厅、图书馆、废墟…）、以及参考对象（日本动画 MV 截帧）全部由人指定。
+              扣一分是因为画面里的具体内容仍由模型补完 —— 人能指定「有什么」，不能指定「长什么样」。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">提示词与参数<small>PROMPT &amp; PARAMS</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>5 / 5</span></div>
+            <p class="dim__note">七段骨架逐字手写，28 轮改写。8 步的 sigma 曲线、cfg 1.0、2048×1408 都不是默认值，
+              是逐项对照实验得出（cfg 2.0 会拉平布料、原生 1578 人群会糊、16 步 edgeN 翻倍）。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">素材与数据<small>MATERIALS</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><span>2 / 5</span></div>
+            <p class="dim__note">只有 v26 之后的参考图通道用到角色三视图，其余全部没有素材输入 —— 纯文字进，图出。
+              素材维度分数低不代表介入少，而是这一条路线本来就不吃素材。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">筛选与迭代<small>CURATION</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>5 / 5</span></div>
+            <p class="dim__note">用归一化的 <b>p50</b>（中间调亮度）与 <b>edgeN</b>（对比度归一化后的细节密度）量化验收，
+              参考中位数 0.258 / 0.177。三条路线被明确否决，v15、v20、v23 三次转向都由指标推动，不是凭感觉。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">像素级后期<small>RETOUCH</small></div>
+          <div class="dim__body">
+            <div class="meter"><i></i><i></i><i></i><i></i><i></i><span>0 / 5</span></div>
+            <p class="dim__note"><b>明确不做。</b>不调色、不加颗粒、不锐化、不修手。第 13–14 轮试过后期调色流水线，
+              结论是那些色散与边缘抖动本身就在制造瑕疵，于是整条推翻，把影调改回提示词里去写。</p>
+          </div>
+        </div>
+      </div>
+
+      <blockquote class="verdict rise">
+        介入度：<b>高</b>，但介入全部发生在语言与判断层。人决定的是「该画什么」和「哪一张算数」，
+        像素层完全交给模型 —— 每一根线条都是它画的，包括那些画错的。
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- ================================================= 作品 -->
+  <section class="block" id="works">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">03 / WORKS</div>
+        <div>
+          <h2>74 张，按主题归类</h2>
+          <p>同一套配方在二十来个场景里各跑一遍：舞台、剧场、麦田、屋顶、废墟、镜厅、列车、神社……
+            可以切成「按主题」或「按版本谱系」两种看法。点开任意一张可看到种子、步数、p50 / edgeN 与完整原始提示词。</p>
+        </div>
+      </div>
+
+      <div class="mode-switch" id="modeSwitch">
+        <button data-mode="theme" class="is-on">按主题</button>
+        <button data-mode="version">按版本谱系</button>
+      </div>
+      <nav class="filters" id="filters"></nav>
+      <div id="groups"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="foot__in">
+    <div>
+      <h5>关于这一组</h5>
+      <p>74 张 PNG，文件名为原始输出名；每张内嵌完整 prompt 元数据，本站的提示词即由此读出。</p>
+      <p>同一角色、同一配方，二十来个场景各出一版，用来验证配方在不同题材上的稳定性。</p>
+    </div>
+    <div>
+      <h5>本页字体</h5>
+      <p>标题 · 京华老宋体</p>
+      <p>正文 · 思源黑体</p>
+    </div>
+    <div>
+      <h5>系列</h5>
+      <p><a href="collage.html">02 千禧迷思 →</a></p>
+      <p><a href="backgrounds.html">03 东方纯背景 →</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/data/comfy.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, wall } = Site;
+  const D = window.__DATA_COMFY;
+
+  // 版本 → 分组
+  const groupOf = {};
+  D.groups.forEach(g => g.items.forEach(it => { groupOf[it.file] = g.name; }));
+  const all = D.items.map(it => ({ ...it, group: groupOf[it.file] || "未归档" }));
+
+  const cfg = {
+    rows: it => [
+      ["主题", it.themeName], ["版本", it.version],
+      ["场景码", it.scene === "—" ? "" : it.scene],
+      ["种子", it.seed], ["步数", it.steps], ["CFG", it.cfg],
+      ["模型", it.model],
+      ["p50", it.p50], ["edgeN", it.edge],
+      ["尺寸", `${it.w} × ${it.h}`],
+      ["文件", it.file]
+    ],
+    prompt: it => it.prompt || null
+  };
+
+  const hero = all.find(i => /v23_C2_garden/.test(i.file)) || all[0];
+  $("#heroBg").style.backgroundImage = `url("${hero.large}")`;
+
+  // 版本谱系表
+  $("#lineage").innerHTML = D.groups.map(g => `
+    <div class="lineage__row">
+      <div class="lineage__v">${esc(g.name)}</div>
+      <div class="lineage__w"><b>${esc(g.what)}</b><div class="lineage__n">${esc(g.note)}</div></div>
+      <div class="verdict-chip" data-v="${esc(g.verdict)}">${esc(g.verdict)}</div>
+    </div>`).join("");
+
+  /* ---------------- 两种看法：按主题 / 按版本 ---------------- */
+  const groupsEl = $("#groups");
+  const navEl = $("#filters");
+  let mode = "";
+
+  function render(m) {
+    mode = m;
+    groupsEl.innerHTML = "";
+    const src = m === "theme" ? D.themes : D.groups;
+
+    navEl.innerHTML = `<button class="is-on" data-g="*">全部<span class="c">${D.items.length}</span></button>` +
+      src.map(g => `<button data-g="${esc(g.key || g.name)}">${esc(g.name)}<span class="c">${g.items.length}</span></button>`).join("");
+
+    src.forEach(g => {
+      const key = g.key || g.name;
+      const sec = document.createElement("section");
+      sec.className = "grp";
+      sec.dataset.key = key;
+
+      const meta = m === "theme"
+        ? (g.desc || "")
+        : `${g.round} · ${g.what}`;
+
+      sec.innerHTML = `
+        <header class="grp__head">
+          <span class="grp__name">${esc(g.name)}</span>
+          <span class="grp__count">${g.items.length}</span>
+          <span class="grp__meta">${esc(meta)}</span>
+        </header>
+        <div class="wall" style="--ar:1.4545"></div>`;
+
+      groupsEl.appendChild(sec);
+
+      const items = g.items.map(it => ({
+        ...it,
+        group: key,
+        sub: m === "theme" ? it.version : it.stem,
+        badge: it.steps ? `${it.steps} 步` : null
+      }));
+      wall($(".wall", sec), items, cfg);
+    });
+
+    $$("button", navEl).forEach(b => b.addEventListener("click", () => {
+      $$("button", navEl).forEach(x => x.classList.toggle("is-on", x === b));
+      const k = b.dataset.g;
+      $$(".grp", groupsEl).forEach(s => {
+        s.style.display = (k === "*" || s.dataset.key === k) ? "" : "none";
+      });
+    }));
+  }
+
+  $$("#modeSwitch button").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.mode === mode) return;
+    $$("#modeSwitch button").forEach(x => x.classList.toggle("is-on", x === b));
+    render(b.dataset.mode);
+  }));
+
+  render("theme");
+  Site.reveals();
+})();
+</script>
+</body>
+</html>

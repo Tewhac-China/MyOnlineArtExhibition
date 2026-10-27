@@ -1,0 +1,5 @@
+{
+  "comfy": "<ComfyUI output 目录，内含 MyFavourite_HighQuality 的 png 与 概述.md>",
+  "collage": "<拼贴画成品目录>",
+  "bg": "<纯背景源目录>"
+}
