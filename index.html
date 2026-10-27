@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>笔触的来处 · AI 辅助绘画线上展厅</title>
+<meta name="description" content="三组 AI 辅助绘画作品：ComfyUI 提示词系列、程序化拼贴画、东方纯背景。记录生成方式与人类介入的程度。">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand__mark"></span>
+    <span class="brand__text"><b>笔触的来处</b> &nbsp;/&nbsp; ONLINE EXHIBITION</span>
+  </a>
+  <nav class="nav">
+    <a href="index.html" class="is-active">首页</a>
+    <a href="comfyui.html"><span class="idx">01</span>舞台与少女</a>
+    <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
+    <a href="backgrounds.html"><span class="idx">03</span>东方纯背景</a>
+  </nav>
+</header>
+
+<main>
+  <!-- ============================================ HERO -->
+  <section class="hero">
+    <div class="hero__bg" id="heroBg">
+      <div></div><div></div><div></div>
+    </div>
+    <div class="hero__inner">
+      <div class="kicker">2026 · 个人作品档案 · 三个系列</div>
+      <h1>笔触的<em>来处</em></h1>
+      <p class="hero__latin">Where the strokes come from</p>
+      <p class="hero__lede">
+        三组作品，两种生成范式，一条共同的底线 —— 没有一张图被手工修过。
+        这里记录的不是「AI 能画什么」，而是人在哪一步插手、插手到什么程度，
+        以及那些没被插手的部分，最后长成了什么样。
+      </p>
+      <div class="hero__foot">
+        <div class="hero__stat"><b>3</b><span>个系列</span></div>
+        <div class="hero__stat"><b id="statTotal">—</b><span>件作品</span></div>
+        <div class="hero__stat"><b>2</b><span>种生成范式</span></div>
+        <div class="hero__stat"><b>0</b><span>次像素级后期</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ 三个系列 -->
+  <section class="block" id="series">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">01 / SERIES</div>
+        <div>
+          <h2>三个系列</h2>
+          <p>每个系列一个子页面，记录它的模型与管线、提示词或代码、以及人类在每一个环节的介入程度。</p>
+        </div>
+      </div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </section>
+
+  <!-- ============================================ 两种范式 -->
+  <section class="block" id="paradigm">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">02 / PARADIGM</div>
+        <div>
+          <h2>两种范式，一种相反的力</h2>
+          <p>三个系列里，只有一个用了扩散模型。另外两个是程序化合成 —— 没有任何像素是模型「画」出来的，
+            它们由代码逐层绘制。这个差别决定了人类能插手的位置。</p>
+        </div>
+      </div>
+
+      <div class="paradigm rise">
+        <div>
+          <div class="paradigm__h"><b>扩散模型</b><i>DIFFUSION</i></div>
+          <ul>
+            <li><b>模型画，人说话。</b>唯一的接口是提示词，人能控制的粒度止于「语言能描述的东西」。</li>
+            <li><b>不可复现。</b>同种子同提示词能复现，但换一个种子，构图就整个换掉 —— 可控性靠筛选，不靠指定。</li>
+            <li><b>验收必须量化。</b>因为无法直接改，只能靠 p50 / edgeN 这类指标判断「这一轮到底比上一轮好还是坏」。</li>
+            <li><b>像素层零介入。</b>要修就得进 PS，而这个系列从头到尾没有进过。</li>
+          </ul>
+        </div>
+        <div>
+          <div class="paradigm__h"><b>程序化合成</b><i>PROCEDURAL</i></div>
+          <ul>
+            <li><b>人画，机器执行。</b>几何、色轴、层序、字的位置都写在代码里，人指定的是结构而不是形容词。</li>
+            <li><b>完全可复现。</b>同一个 seed 就是同一张图，8K 与 1080p 是同一幅画的两种解析度。</li>
+            <li><b>分辨率是参数。</b>整套管线乘一个系数，不是把低清图事后插值 —— 8K 是原生渲染出来的。</li>
+            <li><b>像素层同样零介入。</b>但不是「不修」，是「不需要修」：源头就是矢量与程序化的。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ 介入维度 -->
+  <section class="block" id="dimensions">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">03 / METHOD</div>
+        <div>
+          <h2>人类介入的五个维度</h2>
+          <p>「介入度」不是一个数字。同一个系列可以在前四个维度满分、在最后一个维度是零。
+            三个子页面都按这五项逐一评估，每项 0–5 分。</p>
+        </div>
+      </div>
+      <div class="dims-def rise">
+        <div class="dims-def__row">
+          <div class="dims-def__n">01</div>
+          <div class="dims-def__t">概念与选题</div>
+          <div class="dims-def__d">主题、角色、场景清单、参考对象是谁定的。分数越高，人越是在决定「画什么」。</div>
+        </div>
+        <div class="dims-def__row">
+          <div class="dims-def__n">02</div>
+          <div class="dims-def__t">提示词与参数</div>
+          <div class="dims-def__d">提示词的结构与措辞、采样步数、cfg、分辨率、色轴、层序 —— 决定「怎么画」的那一层。</div>
+        </div>
+        <div class="dims-def__row">
+          <div class="dims-def__n">03</div>
+          <div class="dims-def__t">素材与数据</div>
+          <div class="dims-def__d">参考图、素材库照片、原封面色板、字体。分数越高，人搬运与清洗的原料越多。</div>
+        </div>
+        <div class="dims-def__row">
+          <div class="dims-def__n">04</div>
+          <div class="dims-def__t">筛选与迭代</div>
+          <div class="dims-def__d">从多少张里挑出多少张、否决过几条路线、用什么指标判断好坏。这是介入最密集的地方。</div>
+        </div>
+        <div class="dims-def__row">
+          <div class="dims-def__n">05</div>
+          <div class="dims-def__t">像素级后期</div>
+          <div class="dims-def__d">调色、修补、合成、锐化。三个系列在这个维度上全部是 <b style="color:var(--ink);font-weight:500">0</b>。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ 说明 -->
+  <section class="block block--tight" id="colophon">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">04 / COLOPHON</div>
+        <div>
+          <h2>关于这个展厅</h2>
+          <p>纯静态页面，无框架、无外部依赖，所有图片由原图离线转成 WebP 两档（640 / 1600 长边）。
+            原始文件保存在各自的本地作品库中，本站只发布转码后的展示用图，不包含任何本地路径信息。</p>
+        </div>
+      </div>
+      <div class="two-col rise">
+        <div class="prose">
+          <p><strong>字体约定。</strong>全站标题统一使用<strong>京华老宋体</strong>（KingHwaOldSong）——它是 GB 字库，简体字形齐全，且与拼贴画成片所用的字体同源；说明正文统一使用<strong>思源黑体</strong>。之所以没有继续用华康金文体：它是 Big5 字库，缺简体字形（纯、这、说、时、为、对、开、图、标、记、题、场等），在简体正文里会逐字回退成别的字体，标题反而更碎。</p>
+          <p><strong>数据来源。</strong>ComfyUI 系列的版本、种子、步数、p50、edgeN 取自该系列的出图说明文档，
+            提示词直接从每张 PNG 内嵌的 <code>prompt</code> 元数据里读出；拼贴画的锚点、文案、字体可见性评分
+            取自该系列的风格解析记录；背景系列的生成器与色轴来源取自各自的脚本注释与说明。</p>
+        </div>
+        <div class="prose">
+          <p><strong>一个必须说清楚的区别。</strong>三个系列里，只有「舞台与少女」是扩散模型生成的。
+            「千禧迷思」与「东方纯背景」不含任何扩散模型输出 —— 它们是 Pillow / NumPy 写成的渲染管线，
+            素材来自照片库与原封面色板。把它们并置，是因为三者面对的是同一个问题：
+            <strong>人的判断在哪里进场，机器的手在哪里接管。</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="foot__in">
+    <div>
+      <h5>关于这些图</h5>
+      <p>三组作品分别出自三套生成管线，原文件保存在各自的本地作品库中，本站只发布转码后的展示用图。</p>
+      <p>页面上出现的文件名仅用于与原始输出对照，不含任何本地路径信息。</p>
+    </div>
+    <div>
+      <h5>技术</h5>
+      <p>HTML / CSS / Vanilla JS</p>
+      <p>Pillow 离线转档 · WebP</p>
+      <p>无框架、无 CDN、无追踪</p>
+    </div>
+    <div>
+      <h5>索引</h5>
+      <p><a href="comfyui.html">01 舞台与少女</a></p>
+      <p><a href="collage.html">02 千禧迷思</a></p>
+      <p><a href="backgrounds.html">03 东方纯背景</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/data/comfy.js"></script>
+<script src="assets/data/collage.js"></script>
+<script src="assets/data/bg.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const { $, esc } = Site;
+  const C = window.__DATA_COMFY, K = window.__DATA_COLLAGE, B = window.__DATA_BG;
+  const bgCount = B.series.reduce((n, s) => n + s.items.length, 0);
+  const total = C.items.length + K.items.length + bgCount;
+  $("#statTotal").textContent = total;
+
+  const pick = (items, re, fallback = 0) => items.find(i => re.test(i.file)) || items[fallback];
+  const bgItems = (B.series.find(s => s.key === "bg20c") || B.series[0]).items;
+
+  const defs = [
+    {
+      href: "comfyui.html", no: "01", title: "舞台与少女", count: C.items.length,
+      latin: "My Favourite High Quality",
+      desc: "Qwen-Image 2.1 Turbo 单模型、纯提示词控制，复刻「日本动画 MV 截帧」的细线厚涂画法。28 轮迭代、74 张存档，全程不进后期。",
+      tags: ["扩散模型", "纯提示词", "无后期"],
+      focus: "介入重心：提示词措辞与量化筛选",
+      cover: pick(C.items, /v23_C2_garden|v28_017_shrine/)
+    },
+    {
+      href: "collage.html", no: "02", title: "千禧迷思", count: K.items.length,
+      latin: "Millennium Myth",
+      desc: "从一段 83 秒的参考动画里拆出层序，用 Python 重新搭一遍。六帧程序化拼贴封面，5312×8704 原生 8K 渲染。",
+      tags: ["程序化合成", "代码作画", "原生 8K"],
+      focus: "介入重心：几何、色轴与每一个字的位置",
+      cover: K.items[0]
+    },
+    {
+      href: "backgrounds.html", no: "03", title: "东方纯背景", count: bgCount,
+      latin: "Touhou Backgrounds",
+      desc: "素材库照片 + 色轴映射 + 程序化光效，五个系列、无人无字的纯背景。色轴取自 54 张真实封面的调色板。",
+      tags: ["程序化合成", "色轴映射", "1400–8000px"],
+      focus: "介入重心：为每一景挑素材与色轴",
+      cover: pick(bgItems, /彼岸花野/)
+    }
+  ];
+
+  $("#cards").innerHTML = defs.map(d => `
+    <a class="card rise" href="${d.href}">
+      <div class="card__media">
+        <span class="card__no">${d.no}</span>
+        <img src="${d.cover.large}" alt="${esc(d.title)}" loading="lazy">
+      </div>
+      <div class="card__body">
+        <div class="card__title">${esc(d.title)}<span>${d.count} 件</span></div>
+        <p class="card__desc">${esc(d.desc)}</p>
+        <div class="card__meta">
+          <span class="tag tag--accent">${d.tags[0]}</span>
+          ${d.tags.slice(1).map(t => `<span class="tag">${t}</span>`).join("")}
+        </div>
+        <div class="card__more">${esc(d.focus)}</div>
+      </div>
+    </a>`).join("");
+
+  // hero 背景三联
+  const bgEls = document.querySelectorAll("#heroBg div");
+  [defs[0].cover, defs[1].cover, defs[2].cover].forEach((c, i) => {
+    if (bgEls[i]) bgEls[i].style.backgroundImage = `url("${c.large}")`;
+  });
+
+  Site.reveals();
+})();
+</script>
+</body>
+</html>

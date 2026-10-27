@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>东方纯背景 · Touhou Backgrounds</title>
+<meta name="description" content="五个系列、百余张无人无字的纯背景：素材库照片 + 色轴映射 + 程序化光效。">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="theme-bg">
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand__mark"></span>
+    <span class="brand__text"><b>笔触的来处</b> &nbsp;/&nbsp; ONLINE EXHIBITION</span>
+  </a>
+  <nav class="nav">
+    <a href="index.html">首页</a>
+    <a href="comfyui.html"><span class="idx">01</span>舞台与少女</a>
+    <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
+    <a href="backgrounds.html" class="is-active"><span class="idx">03</span>东方纯背景</a>
+  </nav>
+</header>
+
+<main>
+  <section class="series-hero">
+    <div class="series-hero__bg" id="heroBg"></div>
+    <div class="series-hero__in">
+      <div class="kicker">系列 03 / 03 · 程序化合成 · 色轴映射</div>
+      <h1>东方纯背景</h1>
+      <p class="latin">Touhou Backgrounds &nbsp;·&nbsp; Palette-Mapped Compositing</p>
+      <p class="lede">
+        素材库照片、一条从原封面里量出来的色轴、一个程序化的光源 —— 五个系列、百余张无人无字的纯背景。
+        它们的任务不是被观看，而是被叠上内容：人物、标题、印章，都在这一层之上。
+      </p>
+      <div class="statrow">
+        <div><b>5</b><span>个系列</span></div>
+        <div><b id="statN">—</b><span>张</span></div>
+        <div><b>1000–8000</b><span>像素边长</span></div>
+        <div><b>0</b><span>次像素后期</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= 生成方式 -->
+  <section class="block" id="how">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">01 / PIPELINE</div>
+        <div>
+          <h2>生成方式</h2>
+          <p>五个系列共用一套底座：素材清洗 → 加权混底 → 色轴映射 → 光源 → 地平线 → 点缀 → 暗角颗粒。
+            差别只在「素材配比、色轴来源、构图母题」三件事上 —— 每景只换这三样，其余语法不变。</p>
+        </div>
+      </div>
+
+      <dl class="facts rise">
+        <div><dt>渲染</dt><dd>Pillow + NumPy<small> · 逐像素浮点合成，无模型推理</small></dd></div>
+        <div><dt>尺寸</dt><dd>1000 × 1000 / 1400 × 1400<small> · 排布系列 8000 × 8000 原生</small></dd></div>
+        <div><dt>素材</dt><dd>素材库照片<small> · 依 th06–th13 游戏线分目录，含 380px 级小图</small></dd></div>
+        <div><dt>色轴来源</dt><dd>三种<small> · kmeans 主色相 / 封面调色板重铸 / 手工指定</small></dd></div>
+        <div><dt>去水印</dt><dd>径向 inpaint<small> · 素材商标一律抹掉</small></dd></div>
+        <div><dt>放大策略</dt><dd>按倍率补糊<small> · 超过 2.6 倍自动换大图，避免 JPEG 方块被放大</small></dd></div>
+        <div><dt>扩散模型</dt><dd>无</dd></div>
+        <div><dt>后期</dt><dd>无<small> · 暗角与颗粒在管线内施加，不是导出后加的</small></dd></div>
+      </dl>
+
+      <div class="two-col">
+        <div class="prose rise">
+          <p><strong>色轴怎么来。</strong>「原封面背景 54 张」是为特征库里每一张原封面生成一张同色轴的纯拼接背景 ——
+            从原图做 kmeans 取主色，再按统计亮度校准，因此它与原封面共享同一个色相家族，但<strong>不借用原图任何像素</strong>。
+            「二十幻想原画」走得更远一步：取原封面色板的主色相，用圆均值避开色相绕回错误，再重铸成一族由暗到亮的渐变，尾端微微偏冷。</p>
+          <p><strong>一景一策。</strong>「二十新景」沿用被认可的那套配方语法（素材混底 + pastel 色轴 + 光源 + 花瓣光斑 + 暗角颗粒），
+            但每一景都在 SCENES 列表里单独写一行：哪两三张素材、什么权重、什么模糊半径、光源落在哪、要不要地平线、
+            几片花瓣、暗角多深。张张成立且互不相同，靠的是这份手工清单，不是随机。</p>
+          <p><strong>素材的坑。</strong>素材源图最大只有 380px，在一条 5312 宽的带里要放大 20 倍，JPEG 的 8×8 方块会变成 157px 的方格。
+            藏网格不能靠抹 —— 全图高斯会把结构砍掉一半而方格只降 6%。真正有效的是只平滑块边界那条线（±1px，内部一个像素不碰），
+            方格振幅比 1.125 → 0.931，还保住 89% 结构。</p>
+          <p><strong>一个必须说清楚的区别。</strong>这个系列不含任何扩散模型输出。素材是拿来的照片，色轴是量出来的，
+            其余全部是程序化绘制 —— 它更接近「布景」而不是「画」：无人、无字，只提供质感与光。</p>
+        </div>
+
+        <div class="skeleton rise">
+          <h4>共用底座 · 合成顺序</h4>
+          <ol>
+            <li><b>素材清洗</b>　裁切、去水印、按倍率补糊</li>
+            <li><b>加权混底</b>　2–3 张素材按权重叠成灰阶底</li>
+            <li><b>色轴映射</b>　灰阶 → ramp，暗部到亮部整族替换</li>
+            <li><b>光源</b>　径向遮罩提亮，带强度与半径</li>
+            <li><b>地平线 / 水面</b>　第二素材按 y 渐变压入</li>
+            <li><b>点缀</b>　花瓣 / 光斑 / 星点 / 光束 / 枝条</li>
+            <li><b>收尾</b>　暗角、颗粒、对比曲线</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= 人类介入 -->
+  <section class="block" id="human">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">02 / HUMAN INPUT</div>
+        <div>
+          <h2>人类介入的程度</h2>
+          <p>比拼贴画低一档：那边的每个字都是手写进去的位置，这边的人的判断集中在「为这一景挑哪几张素材、配哪条色轴」。</p>
+        </div>
+      </div>
+
+      <div class="rise">
+        <div class="dim">
+          <div class="dim__name">概念与选题<small>CONCEPT</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>4 / 5</span></div>
+            <p class="dim__note">五个系列的方向由人定：原作向（色轴取自真实封面）、梦幻系（统一配方语法）、贺图十色（同管线换色轴）。
+              母题清单（莲池、富士、星屑、竹苔、藤花…）也是手写的。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">提示词与参数<small>PARAMS</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>4 / 5</span></div>
+            <p class="dim__note">SCENES 一景一策：素材配比、色轴 key、光源位置与强度、地平线高度、花瓣数与颜色、暗角深度，
+              逐景手写在脚本里。没有「一组参数打天下」这种事。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">素材与数据<small>MATERIALS</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>4 / 5</span></div>
+            <p class="dim__note">素材库的挑选、清洗、去水印、分辨率兜底全在人这边。色轴数据来自 54 张真实封面的
+              <code>cover_features.json</code>，是量出来的，不是编的。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">筛选与迭代<small>CURATION</small></div>
+          <div class="dim__body">
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><span>3 / 5</span></div>
+            <p class="dim__note">以总览对照挑图为主，量化程度低于前两个系列 —— 这一组的验收更接近「一眼看上去对不对」，
+              没有 p50 / edgeN 那种硬指标。</p>
+          </div>
+        </div>
+        <div class="dim">
+          <div class="dim__name">像素级后期<small>RETOUCH</small></div>
+          <div class="dim__body">
+            <div class="meter"><i></i><i></i><i></i><i></i><i></i><span>0 / 5</span></div>
+            <p class="dim__note"><b>无。</b>暗角、颗粒、对比曲线都在管线里，作为参数存在；导出后不碰。</p>
+          </div>
+        </div>
+      </div>
+
+      <blockquote class="verdict rise">
+        介入度：<b>中高</b>。单张的「手感」由配方保证，人的工作在于为每一景挑对素材与色轴 ——
+        决定它像哪一张专辑、哪一个季节、哪一种光。
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- ================================================= 作品 -->
+  <section class="block block--tight" id="works" style="border-bottom:0">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">03 / WORKS</div>
+        <div>
+          <h2>五个系列</h2>
+          <p>多数系列前有一张总览拼图，方便一眼看完同一批的差异。点开任意一张可看尺寸、生成器与原始档名。</p>
+        </div>
+      </div>
+      <nav class="filters" id="filters"></nav>
+    </div>
+  </section>
+
+  <div id="seriesWrap"></div>
+</main>
+
+<footer class="foot">
+  <div class="foot__in">
+    <div>
+      <h5>关于这一组</h5>
+      <p>五个系列，均为无人物、无文字的纯背景，尺寸从 1000px 到 8000px 不等。</p>
+      <p>同一套底座配方，靠素材配比、色轴与构图母题区分出不同气质。</p>
+    </div>
+    <div>
+      <h5>本页字体</h5>
+      <p>标题 · 京华老宋体</p>
+      <p>正文 · 思源黑体</p>
+    </div>
+    <div>
+      <h5>系列</h5>
+      <p><a href="comfyui.html">← 01 舞台与少女</a></p>
+      <p><a href="collage.html">← 02 千禧迷思</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/data/bg.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const { $, esc, wall, filters } = Site;
+  const D = window.__DATA_BG;
+  const total = D.series.reduce((n, s) => n + s.items.length, 0);
+  $("#statN").textContent = total;
+
+  const heroSrc = (D.series.find(s => s.key === "bg20c") || D.series[0]).items;
+  const heroPick = heroSrc.find(i => /彼岸花野/.test(i.file)) || heroSrc[0];
+  $("#heroBg").style.backgroundImage = `url("${heroPick.large}")`;
+
+  // 筛选
+  const nav = $("#filters");
+  nav.innerHTML = `<button class="is-on" data-g="*">全部<span class="c">${total}</span></button>` +
+    D.series.map(s => `<button data-g="${s.key}">${esc(s.name)}<span class="c">${s.items.length}</span></button>`).join("");
+
+  // 各系列
+  const wrap = $("#seriesWrap");
+  const cfg = {
+    rows: it => [
+      ["系列", it.series],
+      ["生成器", it.gen],
+      ["尺寸", `${it.w} × ${it.h}`],
+      ["原始档", it.file]
+    ]
+  };
+
+  D.series.forEach((s, si) => {
+    const sec = document.createElement("section");
+    sec.className = "block";
+    sec.id = "s-" + s.key;
+    const ov = s.overview
+      ? `<figure class="series-ov">
+           <img src="${s.overview.large}" alt="${esc(s.name)} 总览" loading="lazy">
+           <figcaption>系列总览 · ${s.items.length} 张</figcaption>
+         </figure>`
+      : "";
+    sec.innerHTML = `
+      <div class="wrap">
+        <div class="series-head rise">
+          <div class="sec-head" style="margin-bottom:0">
+            <div class="sec-head__num">${String(si + 1).padStart(2, "0")} / ${String(D.series.length).padStart(2, "0")} · ${s.items.length} 张</div>
+            <div>
+              <h2>${esc(s.name)}</h2>
+              <p><strong style="color:var(--ink);font-weight:400">${esc(s.sub)}</strong> —— ${esc(s.note)}
+                <br><span style="font-family:var(--f-mono);font-size:11.5px;color:var(--faint)">${esc(s.generator)}</span></p>
+            </div>
+          </div>
+          ${ov}
+        </div>
+        <div class="wall" style="--ar:1;margin-top:clamp(24px,3vw,40px)"></div>
+      </div>`;
+    wrap.appendChild(sec);
+
+    const items = s.items.map(it => ({ ...it, series: s.name, gen: s.generator, sub: it.file }));
+    const wallEl = $(".wall", sec);
+    Site.wall(wallEl, items, cfg);
+    Array.from(wallEl.children).forEach(el => { el.dataset.group = s.key; });
+  });
+
+  filters(nav, wrap);
+  // 筛选时连系列标题一起隐藏
+  const btns = Array.from(nav.querySelectorAll("button"));
+  btns.forEach(b => b.addEventListener("click", () => {
+    const g = b.dataset.g;
+    wrap.querySelectorAll("section.block").forEach(sec => {
+      const has = g === "*" || sec.id === "s-" + g;
+      sec.style.display = has ? "" : "none";
+    });
+  }));
+
+  Site.reveals();
+})();
+</script>
+</body>
+</html>

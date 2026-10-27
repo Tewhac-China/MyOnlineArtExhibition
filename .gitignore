@@ -1,0 +1,16 @@
+# 本机源目录配置（含个人路径，不入库）
+build/sources.local.json
+
+# 编辑器 / 助手残留
+.workbuddy-ai/
+.preview_check.png
+
+# Python
+__pycache__/
+*.py[cod]
+
+# 系统与临时文件（本地调试截图一律不上传）
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
