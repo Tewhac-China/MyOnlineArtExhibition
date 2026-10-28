@@ -59,7 +59,8 @@ for d in (IMG, DATA):
 
 # 每个集合的「序号 → 源文件名」映射。文件一增一删，序号会整体平移，
 # 只按 mtime 判断就会把旧图当新图复用 —— 张冠李戴且不报错。
-_MANIFEST = {}
+_MANIFEST = {}      # 磁盘上那份（只读，用于校验）
+_PENDING = {}       # 本轮新写进去的（保存时才合并）
 
 
 def _manifest(coll):
@@ -84,16 +85,13 @@ def _mapped(coll, idx, src):
 
 
 def _mark(coll, idx, src):
-    m = _manifest(coll)
-    if m is None:
-        m = _MANIFEST[coll] = {}
-    m[f"{idx:03d}"] = os.path.basename(src)
+    _PENDING.setdefault(coll, {})[f"{idx:03d}"] = os.path.basename(src)
 
 
 def save_manifests():
-    for coll, m in _MANIFEST.items():
-        if m is None:
-            continue
+    for coll, add in _PENDING.items():
+        m = dict(_manifest(coll) or {})
+        m.update(add)
         os.makedirs(os.path.join(IMG, coll), exist_ok=True)
         with open(os.path.join(IMG, coll, "manifest.json"), "w", encoding="utf-8") as fh:
             json.dump(m, fh, ensure_ascii=False, indent=0, sort_keys=True)
@@ -107,6 +105,11 @@ def prune_collection(coll, count):
         if m and int(m.group(1)) > count:
             os.remove(path)
             gone += 1
+    # 映射表里超出条数的键也一并清掉
+    for tbl in (_MANIFEST.get(coll), _PENDING.get(coll)):
+        if tbl:
+            for k in [k for k in tbl if int(k) > count]:
+                tbl.pop(k)
     return gone
 
 
@@ -300,8 +303,14 @@ def prettify_scene(scene):
 
 
 # ---------------------------------------------------------- 主题归类
-# 主题展示的置顶顺序
-THEME_PRIORITY = ["whale", "crossing", "billboard"]
+# 主题展示顺序：巨鲸钉在最前，其余按「组内最新版本」倒序（新的在前）
+THEME_PINNED = ["whale"]
+
+
+def ver_num(label):
+    """从版本标签里取轮次：'v34 百景' → 34，'v1–v6 早期' → 1，'未归档' → 0。"""
+    m = re.search(r"v(\d+)", label or "")
+    return int(m.group(1)) if m else 0
 
 THEMES = {
     "stage": ("舞台", "聚光灯、音箱堆与湿地板"),
@@ -524,9 +533,9 @@ def build_comfy():
         theme_groups.append({"key": k, "name": name, "desc": desc,
                              "versions": vers, "items": sel})
 
-    # 主视觉优先：巨鲸 → 道口 → 广告牌，其余按张数
-    theme_groups.sort(key=lambda g: THEME_PRIORITY.index(g["key"])
-                      if g["key"] in THEME_PRIORITY else len(THEME_PRIORITY))
+    # 巨鲸钉第一，其余按组内最新版本倒序；同版本保持原来的张数排序（sort 稳定）
+    theme_groups.sort(key=lambda g: (0 if g["key"] in THEME_PINNED else 1,
+                                     -max(ver_num(it["group"]) for it in g["items"])))
 
     return {"items": items, "groups": groups, "themes": theme_groups}
 
