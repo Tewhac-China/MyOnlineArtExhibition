@@ -112,11 +112,13 @@
       const st = this.stage;
       st.addEventListener("pointerdown", e => {
         if (e.target.closest("button")) return;
-        st.setPointerCapture(e.pointerId);
+        // 指针可能在这一刻已经失效（快速抬手 / 合成事件），抛错会连累后续逻辑
+        try { st.setPointerCapture(e.pointerId); } catch (err) { /* 捕获失败不影响拖动 */ }
         this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         this.moved = 0;
         if (this.pointers.size === 1) {
           this.dragBase = { x: e.clientX, y: e.clientY, tx: this.tx, ty: this.ty };
+          this.downPt = { x: e.clientX, y: e.clientY };
           if (this.s > 1) st.classList.add("is-dragging");
         } else if (this.pointers.size === 2) {
           this.dragBase = null;
@@ -155,6 +157,16 @@
         this.pointers.delete(e.pointerId);
         if (this.pointers.size < 2) this.pinch = null;
         if (this.pointers.size === 0) {
+          // 未放大时，横向拖 = 上一张 / 下一张（触屏与触控板也能连着看）
+          if (wasSingle && this.downPt && this.s <= 1.001) {
+            const dx = e.clientX - this.downPt.x;
+            const dy = e.clientY - this.downPt.y;
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+              this.moved = 99;            // 抑制随后的「点空白处关闭」
+              this.go(dx < 0 ? 1 : -1);
+            }
+          }
+          this.downPt = null;
           this.dragBase = null;
           st.classList.remove("is-dragging");
         } else if (this.pointers.size === 1) {
@@ -282,9 +294,10 @@
     },
 
     /* ---------------- 打开 / 切换 ---------------- */
-    open(items, i, cfg) {
+    open(items, i, cfg, groups) {
       this.init();
       this.items = items; this.cfg = cfg || {};
+      this.groups = groups || [];
       this.root.classList.add("is-open");
       document.documentElement.style.overflow = "hidden";
       this.show(i);
@@ -343,8 +356,12 @@
 
       const rows = (cfg.rows ? cfg.rows(it) : []).filter(r => r && r[1] != null && r[1] !== "");
       const prompt = cfg.prompt ? cfg.prompt(it) : null;
+      // 序列跨组时，标出当前这张属于哪一组，免得连着切的时候失去方位感
+      const multi = new Set(this.groups.filter(Boolean)).size > 1;
+      const grp = multi ? (this.groups[i] || "") : "";
       this.info.innerHTML = `
         <div class="lb__no">${String(i + 1).padStart(2, "0")} / ${String(this.items.length).padStart(2, "0")}</div>
+        ${grp ? `<div class="lb__grp">${esc(grp)}</div>` : ""}
         <h3 class="lb__title">${esc(it.title || "")}</h3>
         <div class="lb__file">${esc(it.file || "")}</div>
         <div class="lb__res" data-state="loading">载入原图…</div>
@@ -362,11 +379,33 @@
   }
 
   /* ---------------------------------------------------- 展牆 */
+  function isShown(el) {
+    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+      if (getComputedStyle(n).display === "none") return false;
+    }
+    return true;
+  }
+
+  function shotGroup(el) {
+    const sec = el.closest(".grp, .block, section");
+    if (!sec) return "";
+    const h = $(".grp__name", sec) || $("h2", sec);
+    return h ? h.textContent.trim() : "";
+  }
+
+  /** 灯箱的连续序列 = 页面上当前"看得见"的所有作品，按 DOM 顺序。
+      这样左右切换会跨子主题连着走；筛成一组时又自然退回只在这一组里转。 */
+  function shotSequence() {
+    const shots = $$(".shot").filter(isShown);
+    return { items: shots.map(s => s.__item), groups: shots.map(shotGroup) };
+  }
+
   function wall(el, items, cfg) {
     const frag = document.createDocumentFragment();
     items.forEach((it, i) => {
       const d = document.createElement("div");
       d.className = "shot";
+      d.__item = it;
       d.innerHTML = `
         <img src="${it.thumb}" alt="${esc(it.title || "")}" loading="lazy" decoding="async">
         <div class="shot__cap">
@@ -377,7 +416,11 @@
       img.addEventListener("load", () => img.classList.add("is-in"), { once: true });
       img.addEventListener("error", () => img.classList.add("is-in"), { once: true });
       if (img.complete) img.classList.add("is-in");
-      d.addEventListener("click", () => LB.open(items, i, cfg));
+      d.addEventListener("click", () => {
+        const seq = shotSequence();
+        const idx = Math.max(0, seq.items.indexOf(it));
+        LB.open(seq.items, idx, cfg, seq.groups);
+      });
       frag.appendChild(d);
     });
     el.appendChild(frag);

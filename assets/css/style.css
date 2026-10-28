@@ -576,6 +576,8 @@ body.theme-collage .wall { --min: 168px; }
   background: var(--bg-2);
 }
 .lb__no { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .22em; color: var(--accent); }
+.lb__grp { margin-top: 8px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .16em; color: var(--faint); }
+.lb__grp::before { content: "所在 · "; opacity: .7; }
 .lb__title { margin: 12px 0 4px; font-family: var(--f-serif); font-size: 26px; font-weight: 400; line-height: 1.3; letter-spacing: .04em; }
 .lb__title { font-family: var(--f-display); }
 .lb__file { font-family: var(--f-mono); font-size: 10.5px; color: var(--faint); word-break: break-all; line-height: 1.7; }
