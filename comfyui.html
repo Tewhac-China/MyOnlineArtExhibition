@@ -238,7 +238,10 @@
     prompt: it => it.prompt || null
   };
 
-  const hero = all.find(i => /v23_C2_garden/.test(i.file)) || all[0];
+  // 主视觉：巨鲸那张
+  const hero = all.find(i => /whale/i.test(i.file))
+            || all.find(i => /v23_C2_garden/.test(i.file))
+            || all[0];
   $("#heroBg").style.backgroundImage = `url("${hero.large}")`;
 
   // 版本谱系表
