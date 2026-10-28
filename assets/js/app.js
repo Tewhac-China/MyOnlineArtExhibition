@@ -60,6 +60,7 @@
     slide: 0, sliding: false, slideBusy: false, _slideTimer: null, ghost: null, _pendingFull: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
     base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _shown: false,
+    _cache: new Map(), _cacheMax: 12,
 
     init() {
       if (this.root) return;
@@ -403,6 +404,13 @@
       this._fullReady = false;
       this._shown = false;
 
+      this.img.alt = it.title || "";
+      const hit = this._cache.get(largeSrc);
+      if (hit && hit.ready) {
+        // 已预取并解码：直接同步上屏，点击即切换
+        this.paintNext(it, { src: largeSrc }, hadPrev, prevSrc, dir, dx);
+        this.preloadNeighbors(i);
+      } else {
       const next = new Image();
       next.onload = () => {
         if (token !== this._token) return;
@@ -422,6 +430,8 @@
       next.onerror = () => { /* 载入失败保持当前画面，不白屏 */ };
       next.src = largeSrc;
       this.img.alt = it.title || "";
+      this.preloadNeighbors(i);
+      }
 
       // 原图（原始分辨率）随后接管，保证大图展示时是最清晰的版本
       const resText = fullSrc ? "载入原图…" : `原图 · ${it.fw || it.w} × ${it.fh || it.h}`;
@@ -467,6 +477,41 @@
       if (!pre) return;
       const clamped = pre.classList.toggle("is-clamped");
       btn.textContent = clamped ? "展开" : "收起";
+    },
+
+    /** 预取并预解码：左右切换要用的下一张，提前放进内存，点击时零等待 */
+    preload(src) {
+      if (!src) return null;
+      let e = this._cache.get(src);
+      if (e) {
+        // 命中就挪到队尾（LRU）
+        this._cache.delete(src);
+        this._cache.set(src, e);
+        return e;
+      }
+      const im = new Image();
+      e = { el: im, ready: false };
+      const done = () => { e.ready = true; };
+      im.addEventListener("load", done, { once: true });
+      im.addEventListener("error", done, { once: true });
+      im.src = src;
+      if (typeof im.decode === "function") im.decode().then(done, done);
+      this._cache.set(src, e);
+      if (this._cache.size > this._cacheMax) {
+        const oldest = this._cache.keys().next().value;
+        if (oldest !== src) this._cache.delete(oldest);
+      }
+      return e;
+    },
+
+    /** 预取前后各一张（下一张优先，上一张次之） */
+    preloadNeighbors(i) {
+      const n = this.items.length;
+      if (n < 2) return;
+      const at = k => this.items[(k + n) % n];
+      const a = at(i + 1), b = at(i - 1);
+      this.preload(a.large || a.thumb);
+      setTimeout(() => this.preload(b.large || b.thumb), 60);
     },
 
     /** 位图就绪后真正上屏：原图若先到就直接上原图，否则先上快图再替换 */

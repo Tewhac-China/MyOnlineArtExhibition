@@ -561,7 +561,7 @@ body.theme-collage .wall { --min: 168px; }
 }
 .lb__img { position: relative; z-index: 2; }
 .lb__stage img.is-slide {
-  transition: transform .46s cubic-bezier(.22,.68,.24,1);
+  transition: transform .38s cubic-bezier(.2,.72,.24,1);
   box-shadow: none;
 }
 @media (prefers-reduced-motion: reduce) {
