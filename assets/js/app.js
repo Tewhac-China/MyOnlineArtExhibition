@@ -44,6 +44,7 @@
     root: null, stage: null, img: null, info: null,
     items: [], idx: 0, cfg: null,
     s: 1, tx: 0, ty: 0, MAX: 16,
+    slide: 0, sliding: false, _slideTimer: null, ghost: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
     base: { w: 1, h: 1 }, lastTap: 0, _token: 0,
 
@@ -56,7 +57,8 @@
         <button class="lb__info-btn" aria-label="信息面板">ⓘ</button>
         <div class="lb__stage">
           <button class="lb__nav prev" aria-label="上一张">‹</button>
-          <img alt="" draggable="false">
+          <img class="lb__img" alt="" draggable="false">
+          <img class="lb__ghost" alt="" draggable="false" hidden>
           <button class="lb__nav next" aria-label="下一张">›</button>
           <div class="lb__tools">
             <button data-act="out" aria-label="缩小" title="缩小（-）">−</button>
@@ -73,7 +75,8 @@
 
       this.root = root;
       this.stage = $(".lb__stage", root);
-      this.img = $("img", root);
+      this.img = $(".lb__img", root);
+      this.ghost = $(".lb__ghost", root);
       this.info = $(".lb__info", root);
 
       $(".lb__close", root).addEventListener("click", () => this.close());
@@ -149,6 +152,17 @@
           this.tx = this.dragBase.tx + dx;
           this.ty = this.dragBase.ty + dy;
           this.apply(false);
+        } else if (this.dragBase && !this.slide && this.items.length > 1) {
+          // 未放大：横向拖动直接带画面，跟手；纵向或斜向不抢
+          const dx = e.clientX - this.dragBase.x;
+          const dy = e.clientY - this.dragBase.y;
+          if (!this.sliding && (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.3)) return;
+          this.sliding = true;
+          this.moved = Math.max(this.moved, Math.abs(dx));
+          const W = (st.clientWidth || window.innerWidth) * 0.92;
+          this.img.classList.remove("is-slide");
+          this.slide = Math.max(-W, Math.min(W, dx * 0.92));
+          this.apply(false);
         }
       });
 
@@ -157,14 +171,18 @@
         this.pointers.delete(e.pointerId);
         if (this.pointers.size < 2) this.pinch = null;
         if (this.pointers.size === 0) {
-          // 未放大时，横向拖 = 上一张 / 下一张（触屏与触控板也能连着看）
-          if (wasSingle && this.downPt && this.s <= 1.001) {
-            const dx = e.clientX - this.downPt.x;
-            const dy = e.clientY - this.downPt.y;
-            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) {
-              this.moved = 99;            // 抑制随后的「点空白处关闭」
-              this.go(dx < 0 ? 1 : -1);
-            }
+          if (this.sliding) {
+            // 松手：够远就让画面继续滑出去完成切换，否则回弹。两种都不算"点空白关闭"。
+            const dx = this.slide;
+            const W = (st.clientWidth || window.innerWidth) * 0.92;
+            // 阈值要有下限：只按宽度算，窄屏/异常布局下会退化到几像素，轻碰就切图
+            const need = Math.max(48, Math.min(120, W * 0.18));
+            const commit = Math.abs(dx) > need;
+            this.sliding = false;
+            this.downPt = null;
+            this.dragBase = null;
+            this.settleSlide(commit ? (dx < 0 ? 1 : -1) : 0, dx);
+            return;
           }
           this.downPt = null;
           this.dragBase = null;
@@ -275,8 +293,9 @@
     apply(anim) {
       this.clampPan();
       const im = this.img;
-      im.classList.toggle("is-anim", !!anim);
-      im.style.transform = `translate3d(${this.tx}px, ${this.ty}px, 0) scale(${this.s})`;
+      // 滑动切换期间由 .is-slide 驱动 transform，不能再挂 .is-anim（两者抢同一个属性）
+      im.classList.toggle("is-anim", !!anim && !this.slide);
+      im.style.transform = `translate3d(${this.tx + this.slide}px, ${this.ty}px, 0) scale(${this.s})`;
       this.stage.classList.toggle("is-zoomed", this.s > 1.001);
       const pct = $(".pct", this.root);
       if (pct) pct.textContent = Math.round(this.s * 100) + "%";
@@ -305,34 +324,48 @@
     close() {
       this.root.classList.remove("is-open");
       document.documentElement.style.overflow = "";
+      clearTimeout(this._slideTimer);
+      this.sliding = false;
+      this.slide = 0;
+      this.ghost.hidden = true;
+      this.ghost.removeAttribute("src");
+      this.ghost.classList.remove("is-slide");
+      this.img.classList.remove("is-slide");
       this.s = 1; this.tx = 0; this.ty = 0;
       this.img.style.transform = "";
       const pct0 = $(".pct", this.root);
       if (pct0) pct0.textContent = "100%";
     },
-    go(d) {
+    go(d, dx = 0) {
       const n = this.items.length;
-      this.show((this.idx + d + n) % n);
+      this.show((this.idx + d + n) % n, d, dx);
     },
-    show(i) {
+    show(i, dir = 1, dx = 0) {
       this.idx = i;
       const it = this.items[i];
       const cfg = this.cfg;
       this.s = 1; this.tx = 0; this.ty = 0;
-      this.img.style.transform = "";
       const pct0 = $(".pct", this.root);
       if (pct0) pct0.textContent = "100%";
 
-      this.img.classList.remove("is-in");
+      // 已有画面在位时才做滑动交接；首次打开仍是从容淡入
+      const prevSrc = this.img.getAttribute("src") || "";
+      const hadPrev = !!prevSrc && this.img.classList.contains("is-in");
+
       const next = new Image();
       next.onload = () => {
-        this.img.src = next.src;
-        requestAnimationFrame(() => {
+        if (hadPrev) this.slideTo(next.src, dir, dx, prevSrc);
+        else {
+          this.img.src = next.src;
+          this.img.classList.remove("is-in");
+          void this.img.offsetWidth;          // 强制重算，否则淡入会被合并掉
           this.img.classList.add("is-in");
+          this.slide = 0;
           this.measure();
           this.apply(false);
-        });
+        }
       };
+      next.onerror = () => { /* 载入失败保持当前画面，不白屏 */ };
       next.src = it.large || it.thumb;
       this.img.alt = it.title || "";
 
@@ -371,6 +404,56 @@
         ${prompt ? `<div class="lb__prompt-h"><span>原始提示词</span><span>${prompt.length} 字符</span></div>
         <pre class="lb__prompt">${esc(prompt)}</pre>` : ""}`;
       this.info.scrollTop = 0;
+    },
+
+    /** 滑动交接：旧画面交给 ghost 继续往手势方向滑出，新画面从另一侧滑入。
+        dir=+1 看下一张（新图自右来），dir=-1 看上一张；dx 是手指已经拖出的位移。 */
+    slideTo(newSrc, dir, dx, prevSrc) {
+      const W = (this.stage.clientWidth || window.innerWidth) * 0.92;
+      const outX = (dir >= 0 ? -1 : 1) * W;
+      const g = this.ghost;
+
+      clearTimeout(this._slideTimer);
+      g.classList.remove("is-slide");
+      g.src = prevSrc;
+      g.hidden = false;
+      g.style.transform = `translate3d(${dx}px, 0, 0)`;
+
+      this.img.classList.remove("is-anim", "is-slide");
+      this.img.src = newSrc;
+      this.slide = -outX + dx;          // 新图摆到与手指连续的位置
+      this.apply(false);
+      this.img.classList.add("is-in");
+
+      // 关键一步：强制样式重算。少了它，同一帧里"摆到起点 + 滑到 0"会被合并，
+      // 于是命中缓存的图（往回翻最容易命中）直接瞬移 —— 就是那个反向切换的 bug。
+      void this.img.offsetWidth;
+
+      g.classList.add("is-slide");
+      this.img.classList.add("is-slide");
+      g.style.transform = `translate3d(${dx + outX}px, 0, 0)`;
+      this.slide = 0;
+      this.apply(false);
+
+      requestAnimationFrame(() => this.measure());
+      this._slideTimer = setTimeout(() => {
+        g.hidden = true;
+        g.removeAttribute("src");
+        g.classList.remove("is-slide");
+        this.img.classList.remove("is-slide");
+        this.measure();
+      }, 620);
+    },
+
+    /** 未放大时的回弹 / 收尾：把 slide 归零 */
+    settleSlide(commitDir, dx) {
+      const W = (this.stage.clientWidth || window.innerWidth) * 0.92;
+      if (commitDir) { this.go(commitDir, dx); return; }
+      this.img.classList.add("is-slide");
+      this.slide = 0;
+      this.apply(false);
+      clearTimeout(this._slideTimer);
+      this._slideTimer = setTimeout(() => this.img.classList.remove("is-slide"), 520);
     }
   };
 
