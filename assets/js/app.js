@@ -57,8 +57,10 @@
         <button class="lb__info-btn" aria-label="信息面板">ⓘ</button>
         <div class="lb__stage">
           <button class="lb__nav prev" aria-label="上一张">‹</button>
-          <img class="lb__img" alt="" draggable="false">
-          <img class="lb__ghost" alt="" draggable="false" hidden>
+          <div class="lb__canvas">
+            <img class="lb__img" alt="" draggable="false">
+            <img class="lb__ghost" alt="" draggable="false" hidden>
+          </div>
           <button class="lb__nav next" aria-label="下一张">›</button>
           <div class="lb__tools">
             <button data-act="out" aria-label="缩小" title="缩小（-）">−</button>
