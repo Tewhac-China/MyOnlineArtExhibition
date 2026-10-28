@@ -46,7 +46,7 @@
     s: 1, tx: 0, ty: 0, MAX: 16,
     slide: 0, sliding: false, _slideTimer: null, ghost: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
-    base: { w: 1, h: 1 }, lastTap: 0, _token: 0,
+    base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _shown: false,
 
     init() {
       if (this.root) return;
@@ -352,11 +352,22 @@
       const prevSrc = this.img.getAttribute("src") || "";
       const hadPrev = !!prevSrc && this.img.classList.contains("is-in");
 
+      const token = ++this._token;
+      const largeSrc = it.large || it.thumb;
+      const fullSrc = it.full && it.full !== it.large ? it.full : null;
+      this._fullSrc = fullSrc;
+      this._fullReady = false;
+      this._shown = false;
+
       const next = new Image();
       next.onload = () => {
-        if (hadPrev) this.slideTo(next.src, dir, dx, prevSrc);
+        if (token !== this._token) return;
+        // 原图若先到（缓存命中时很常见），直接上原图，避免先铺一张大图再被替换
+        const src = this._fullReady && this._fullSrc ? this._fullSrc : next.src;
+        this._shown = true;
+        if (hadPrev) this.slideTo(src, dir, dx, prevSrc);
         else {
-          this.img.src = next.src;
+          this.img.src = src;
           this.img.classList.remove("is-in");
           void this.img.offsetWidth;          // 强制重算，否则淡入会被合并掉
           this.img.classList.add("is-in");
@@ -366,19 +377,20 @@
         }
       };
       next.onerror = () => { /* 载入失败保持当前画面，不白屏 */ };
-      next.src = it.large || it.thumb;
+      next.src = largeSrc;
       this.img.alt = it.title || "";
 
       // 原图（原始分辨率）随后接管，保证大图展示时是最清晰的版本
-      const fullSrc = it.full && it.full !== it.large ? it.full : null;
-      const token = ++this._token;
       if (fullSrc) {
         this.setRes("载入原图…", "loading");
         const big = new Image();
         big.onload = () => {
           if (token !== this._token) return;
-          this.img.src = big.src;
+          this._fullReady = true;
           this.setRes(`原图 · ${big.naturalWidth} × ${big.naturalHeight}`, "ready");
+          // 画面已经铺开就地替换；还没铺开就等 next.onload 直接用原图
+          if (!this._shown) return;
+          this.img.src = big.src;
           requestAnimationFrame(() => { this.measure(); this.apply(false); });
         };
         big.onerror = () => { if (token === this._token) this.setRes("原图载入失败", "error"); };
