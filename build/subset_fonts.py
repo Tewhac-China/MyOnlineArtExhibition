@@ -33,6 +33,11 @@ def collect():
         with open(p, encoding="utf-8") as fh:
             txt = fh.read()
         chars |= set(CJK.findall(txt))
+    # CSS 里 content:"" 写的文字也是会显示出来的字，漏扫就会静默回退成别的字体
+    for p in glob.glob(os.path.join(ROOT, "assets", "css", "*.css")):
+        with open(p, encoding="utf-8") as fh:
+            for css_txt in re.findall(r'content:\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', fh.read()):
+                chars |= set(CJK.findall(css_txt))
     chars.discard("\n")
     return "".join(sorted(chars))
 
