@@ -501,7 +501,7 @@ BG_SERIES = [
 
 
 # 页面上的展示顺序：靠前的三个系列先看
-SERIES_ORDER = ["birthday", "layout", "bg20b", "bg20c", "covers"]
+SERIES_ORDER = ["layout", "birthday", "bg20b", "bg20c", "covers"]
 
 
 def build_backgrounds():
