@@ -60,14 +60,16 @@ COMFY_T = r"""
     ok('下一张换了图', document.querySelector('.lb__img').src!==src0);
     document.querySelector('.lb__nav.prev').click(); await wait(900);
     ok('上一张 idx-1', L.idx===5, L.idx);
-    // 缩放
+    // 缩放（百分比按原生像素算：100% = 一个图像像素对一个 CSS 像素）
     var pct=function(){ return parseInt(document.querySelector('.pct').textContent); };
+    var fitPct=pct();
+    ok('适应窗口 < 100%（8K 缩到窗口里本来就不到原生）', fitPct<100 && fitPct>0, fitPct);
     document.querySelector('.lb__tools [data-act="in"]').click(); await wait(400);
-    ok('放大按钮生效', pct()>100, pct());
+    ok('放大按钮生效', pct()>fitPct, pct()+' vs '+fitPct);
     document.querySelector('.lb__tools [data-act="one"]').click(); await wait(600);
-    ok('1:1 生效', pct()>100, pct());
+    ok('1:1 = 原生 100%', pct()===100, pct());
     document.querySelector('.lb__tools [data-act="fit"]').click(); await wait(400);
-    ok('适应窗口=100%', pct()===100, pct());
+    ok('适应窗口回到初始比例', pct()===fitPct, pct()+' vs '+fitPct);
     // 原图
     ok('原图标签就绪', /原图 · \d+ × \d+/.test(document.querySelector('.lb__res').textContent),
        document.querySelector('.lb__res').textContent);

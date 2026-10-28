@@ -56,7 +56,7 @@
   const LB = {
     root: null, stage: null, img: null, info: null,
     items: [], idx: 0, cfg: null,
-    s: 1, tx: 0, ty: 0, MAX: 16,
+    s: 1, tx: 0, ty: 0, natS: 1, maxS: 16,
     slide: 0, sliding: false, slideBusy: false, _slideTimer: null, ghost: null, _pendingFull: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
     base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _shown: false,
@@ -87,7 +87,7 @@
             <button data-act="fit" aria-label="适应窗口" title="适应窗口">⤢</button>
             <button data-act="one" aria-label="原始大小" title="1:1 原始像素">1:1</button>
           </div>
-          <div class="lb__hint">滚轮 / 双指缩放 · 拖动平移 · 双击放大</div>
+          <div class="lb__hint">滚轮 / 双指缩放 · 拖动平移 · 双击切到原图 100%</div>
         </div>
         <aside class="lb__info"></aside>`;
       document.body.appendChild(root);
@@ -228,7 +228,7 @@
           if (now - this.lastTap < 320) {
             this.lastTap = 0;
             if (this.s > 1.05) this.reset();
-            else this.zoomTo(2.5, e.clientX, e.clientY, true);
+            else this.zoomTo(this.natS, e.clientX, e.clientY, true);
           } else {
             this.lastTap = now;
           }
@@ -248,7 +248,7 @@
         if (e.target.closest("button")) return;
         e.preventDefault();
         if (this.s > 1.05) this.reset();
-        else this.zoomTo(2.5, e.clientX, e.clientY, true);
+        else this.zoomTo(this.natS, e.clientX, e.clientY, true);
       });
     },
 
@@ -276,12 +276,19 @@
       // clientWidth 不受 transform 影响，始终是“适应窗口”时的基准尺寸
       this.base.w = this.img.clientWidth || 1;
       this.base.h = this.img.clientHeight || 1;
+      // 百分比按「原生像素」算：100% 就是一个图像像素对一个 CSS 像素，
+      // 跟看图软件一致。按“适应窗口=100%”算的话，8K 图在 100% 时其实只有 7%，
+      // 会让人以为已经是原图了 —— 这正是「大图不像 8K」的来源。
+      const it = this.items[this.idx] || {};
+      const nat = it.fw || it.w || this.img.naturalWidth || this.base.w;
+      this.natS = Math.max(1, nat / this.base.w);
+      this.maxS = Math.max(2, this.natS * 2);   // 最多放到原生的 200%
     },
 
     /** 以屏幕坐标 (cx, cy) 为锚点缩放到 target */
     zoomTo(target, cx, cy, anim) {
       this.measure();
-      const s2 = clamp(target, 1, this.MAX);
+      const s2 = clamp(target, 1, this.maxS || this.natS * 2 || 16);
       const ox = cx == null ? 0 : cx - (this._rl + this._rw / 2);
       const oy = cy == null ? 0 : cy - (this._rt + this._rh / 2);
       const k = s2 / this.s;
@@ -303,10 +310,8 @@
 
     actualSize() {
       this.measure();
-      const it = this.items[this.idx] || {};
-      const nat = it.fw || it.w || this.img.naturalWidth || this.base.w;
       this.s = 1; this.tx = 0; this.ty = 0;
-      this.zoomTo(clamp(nat / this.base.w, 1, this.MAX),
+      this.zoomTo(this.natS,
                  this._rl + this._rw / 2, this._rt + this._rh / 2, true);
     },
 
@@ -328,6 +333,22 @@
       this.ty = clamp(this.ty, -my, my);
     },
 
+    /** 百分比只写 DOM，不动画面 —— 首帧布局还没稳定时用它补一次 */
+    syncPct() {
+      // 换图的那一帧 clientWidth 还是 0/1，算出来会是 0%，等一帧再算
+      if (!this.base.w || this.base.w < 2) {
+        clearTimeout(this._pctT);
+        this._pctT = setTimeout(() => { this.measure(); this.syncPct(); }, 60);
+        return;
+      }
+      const p = Math.round(this.s / (this.natS || 1) * 100);
+      if (p !== this._pct) {
+        this._pct = p;
+        const el = $(".pct", this.root);
+        if (el) el.textContent = p + "%";
+      }
+    },
+
     apply(anim) {
       this.clampPan();
       const im = this.img;
@@ -335,12 +356,7 @@
       im.classList.toggle("is-anim", !!anim && !this.slide);
       im.style.transform = `translate3d(${this.tx + this.slide}px, ${this.ty}px, 0) scale(${this.s})`;
       this.stage.classList.toggle("is-zoomed", this.s > 1.001);
-      const p = Math.round(this.s * 100);
-      if (p !== this._pct) {
-        this._pct = p;
-        const pct = $(".pct", this.root);
-        if (pct) pct.textContent = p + "%";
-      }
+      this.syncPct();
       if (anim) {
         clearTimeout(this._t);
         this._t = setTimeout(() => im.classList.remove("is-anim"), 240);
@@ -391,8 +407,8 @@
       this.img.classList.remove("is-slide");
       this.s = 1; this.tx = 0; this.ty = 0;
       this.img.style.transform = "";
-      const pct0 = $(".pct", this.root);
-      if (pct0) pct0.textContent = "100%";
+      this._pct = null;
+      this.syncPct();
     },
     go(d, dx = 0) {
       const n = this.items.length;
@@ -403,8 +419,8 @@
       const it = this.items[i];
       const cfg = this.cfg;
       this.s = 1; this.tx = 0; this.ty = 0;
-      const pct0 = $(".pct", this.root);
-      if (pct0) pct0.textContent = "100%";
+      this._pct = null;
+      this.syncPct();
 
       // 已有画面在位时才做滑动交接；首次打开仍是从容淡入
       const prevSrc = this.img.getAttribute("src") || "";
@@ -615,6 +631,8 @@
         this.refreshRect();
         this.apply(false);
       }
+      // 新图刚换上去时 clientWidth 还是旧的，下一帧再量一次
+      requestAnimationFrame(() => { this.measure(); this.syncPct(); });
     },
 
     /** 滑动交接：旧画面交给 ghost 继续往手势方向滑出，新画面从另一侧滑入。
