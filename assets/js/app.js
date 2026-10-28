@@ -361,6 +361,19 @@
       this.groups = groups || [];
       this.root.classList.add("is-open");
       document.documentElement.style.overflow = "hidden";
+
+      // 每次打开都按「首次进入」处理：清掉上一轮的画面与节奏，避免从上一次的图滑过来
+      clearTimeout(this._slideTimer);
+      this._lastNav = 0;
+      this.slide = 0;
+      this.sliding = false;
+      this.slideBusy = false;
+      this._pendingFull = null;
+      const g = this.ghost;
+      if (g) { g.hidden = true; g.removeAttribute("src"); g.classList.remove("is-slide"); }
+      this.img.classList.remove("is-in", "is-slide", "is-quick", "is-anim");
+      this.img.removeAttribute("src");
+
       this.refreshRect();
       this.show(i);
     },
