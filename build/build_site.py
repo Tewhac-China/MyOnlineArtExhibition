@@ -56,6 +56,14 @@ for d in (IMG, DATA):
     os.makedirs(d, exist_ok=True)
 
 
+def _done(path, src):
+    """产物算不算"已经生成好了"：存在、非空、且不比源文件旧。
+    只看存在性会被一次中断的写入永久钉死 —— 0 字节的 webp 既跳过重建，
+    又能在 Pages 上返回 200，坏图就这么悄悄上线了。"""
+    return (os.path.exists(path) and os.path.getsize(path) > 0
+            and os.path.getmtime(path) > os.path.getmtime(src))
+
+
 # ---------------------------------------------------------------- image utils
 def build_webp(src, coll, idx, large_src=None, force=False):
     """生成 thumb/large 两档 webp，返回 (w, h, thumb_rel, large_rel)。"""
@@ -66,8 +74,7 @@ def build_webp(src, coll, idx, large_src=None, force=False):
     rel_t = f"assets/img/{coll}/t_{idx:03d}.webp"
     rel_l = f"assets/img/{coll}/l_{idx:03d}.webp"
 
-    if not force and os.path.exists(t_path) and os.path.exists(l_path) \
-            and os.path.getmtime(t_path) > os.path.getmtime(src):
+    if not force and _done(t_path, src) and _done(l_path, src):
         with Image.open(src) as im:
             w, h = im.size
         return w, h, rel_t, rel_l
@@ -93,7 +100,7 @@ def build_full(src, coll, idx, force=False):
     with Image.open(src) as im:
         im = im.convert("RGB")
         w, h = im.size
-        if not force and os.path.exists(f_path) and os.path.getmtime(f_path) > os.path.getmtime(src):
+        if not force and _done(f_path, src):
             return rel, w, h
         big = max(w, h) > 3000
         im.save(f_path, "WEBP", quality=(88 if big else 90), method=(4 if big else 5))
@@ -104,7 +111,7 @@ def build_large_only(src, coll, idx, force=False):
     """仅用高分辨率源（8K）出大图，缩略图沿用已有。"""
     out_dir = os.path.join(IMG, coll)
     l_path = os.path.join(out_dir, f"l_{idx:03d}.webp")
-    if not force and os.path.exists(l_path) and os.path.getmtime(l_path) > os.path.getmtime(src):
+    if not force and _done(l_path, src):
         return f"assets/img/{coll}/l_{idx:03d}.webp"
     with Image.open(src) as im:
         im = im.convert("RGB")
@@ -192,6 +199,12 @@ VERSION_META = {
     "v26 参考图试跑": ("第 26 轮", "启用参考图通道", "试验", "用三视图当参考，身份锁住但细节掉一档。"),
     "v27 参考图": ("第 27 轮", "参考图锁身份", "取舍", "发夹 / 领口缎带 / 发长锁死，12 步换取一致性。"),
     "v28 自由创作": ("第 28 轮", "用定稿配方自由创作", "产出", "10 个新场景，单张 355s，稳定产出。"),
+    "v29 写实支线": ("第 29 轮", "无人称大场景（鲸 / 道口 / 拉面摊）", "偏离",
+                 "构图与光都成立，但画风跑成了摄影：没有细线、没有笔触。留 3 张作对照。"),
+    "v31 对照": ("第 31 轮", "在 v29 的场景里加一个远处的小人物", "仍偏离",
+               "人物不占画幅就带不动画风 —— 画风不在场景里。"),
+    "v33 黄雨衣系列": ("第 33 轮", "换自己的角色：黄雨衣少女 × 八个世界", "关键结论",
+                  "画风回来了。anime 画风由人物承载，不由风格词承载 —— 这是整条谱系最贵的一条。"),
 }
 VERSION_ORDER = list(VERSION_META.keys())
 # 同一輪的散落標籤併入同一組
@@ -216,7 +229,7 @@ THEMES = {
     "bedroom": ("卧室", "四柱床与窗光"),
     "crowd": ("人群", "护栏、购物袋与背后的观众"),
     "door": ("门隙", "从门缝里看出去"),
-    "ruins": ("废墟", "荒草、断柱与鸟居"),
+    "ruins": ("废墟", "荒草、断柱、鸟居，与林间长满蕨类的旧机甲"),
     "field": ("麦田", "齐腰的麦穗与天光"),
     "garden": ("花园", "盛放的玫瑰枝"),
     "stairs": ("阶梯", "扶手与柱头"),
@@ -234,7 +247,19 @@ THEMES = {
     "phonebooth": ("电话亭", "磨砂玻璃与金属框"),
     "piano": ("钢琴", "湿沙上的琴盖与琴键"),
     "corridor": ("走廊", "一点透视的长廊"),
+    "crossing": ("道口", "铁轨、警示机与压顶的雷雨云"),
+    "ramen": ("拉面店", "暖帘、柜台蒸汽与街对面的夜"),
+    "whale": ("巨鲸", "淹没街道上的鲸与落日"),
+    "figure": ("远影", "空景里一个撑伞的小小人影"),
+    "atrium": ("中庭", "环形楼层仰视的天井光"),
+    "cat": ("猫", "窗台、蕾丝窗帘与怀里的黑猫"),
+    "lighthouse": ("灯塔", "雪地栅栏、极光与塔顶的光"),
     "other": ("其他", "未标注场景的试验稿"),
+}
+
+# 场景码 → 主题的显式归并：画面主体是"荒废之物"时，算废墟而不是单开一类。
+SCENE_THEME = {
+    "mecha": "ruins",     # 林间长满蕨类的旧机甲 —— 与断柱鸟居同属荒废
 }
 
 # 无场景码时按提示词关键词兜底（顺序即优先级：越靠前越是"画面主体"）
@@ -248,6 +273,13 @@ PROMPT_THEME = [
     (r"one point perspective|corridor|doorframe", "corridor"),
     (r"stone lantern|torii", "shrine"),
     (r"konbini|convenience store|products are huge", "konbini"),
+    (r"railway crossing|the tracks run straight|crossing barrier|warning light", "crossing"),
+    (r"noren|ramen shop|steaming bowls", "ramen"),
+    (r"\bwhale\b", "whale"),
+    (r"circular atrium|rings of balconies", "atrium"),
+    (r"\blighthouse\b", "lighthouse"),
+    (r"\bmecha\b|rusty robot", "ruins"),
+    (r"a black cat|in her arms, a cat", "cat"),
     (r"umbrella|raindrops|\brain\b|wet street", "rain"),
     (r"narrow gap|door edge|chipped dark wood door", "door"),
     (r"library|bookshelf|stack of (leather )?books|leather books|heavy desk", "library"),
@@ -269,6 +301,8 @@ def classify_theme(scene, prompt):
     判不出来再全文兜底 —— 全文里的比喻（mirror sharp / mirrors the lamps）会骗人。"""
     if scene and scene != "—":
         tail = scene.split("_")[-1].lower()
+        if tail in SCENE_THEME:
+            return SCENE_THEME[tail]
         if tail in THEMES:
             return tail
         if scene.lower() in THEMES:
@@ -457,21 +491,23 @@ def build_backgrounds():
             if os.path.exists(op):
                 idx += 1
                 w, h, t, l = build_webp(op, "bg", idx)
-                fp, fw, fh = build_full(op, "bg", idx)
-                if max(fw, fh) <= LARGE_MAX:
-                    fp = l
+                if max(w, h) <= LARGE_MAX:
+                    fp, fw, fh = l, w, h      # 快图即原图，不再写一份没人引用的 f_
+                else:
+                    fp, fw, fh = build_full(op, "bg", idx)
                 ov = {"id": f"g{idx:03d}", "title": "系列总览", "thumb": t, "large": l,
                       "full": fp, "w": w, "h": h, "fw": fw, "fh": fh, "file": s["overview"]}
         for f in files:
             idx += 1
             p = os.path.join(SRC_BG, s["dir"], f) if s["dir"] else os.path.join(SRC_BG, f)
             w, h, t, l = build_webp(p, "bg", idx)
-            fp, fw, fh = build_full(p, "bg", idx)
             title = re.sub(r"\.png$", "", f)
             title = title.replace("birthday_", "").replace("_背景", "")
             title = _t2s(title)
-            if max(fw, fh) <= LARGE_MAX:
-                fp = l                      # 原图本身就不大，快图即原图
+            if max(w, h) <= LARGE_MAX:
+                fp, fw, fh = l, w, h        # 原图本身就不大，快图即原图，不再写一份 f_
+            else:
+                fp, fw, fh = build_full(p, "bg", idx)
             item = {"id": f"g{idx:03d}", "file": f, "title": title,
                     "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh}
             # 8K 版：用高分辨率源替换大图
