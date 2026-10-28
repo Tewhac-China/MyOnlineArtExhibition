@@ -57,6 +57,59 @@ for d in (IMG, DATA):
     os.makedirs(d, exist_ok=True)
 
 
+# 每个集合的「序号 → 源文件名」映射。文件一增一删，序号会整体平移，
+# 只按 mtime 判断就会把旧图当新图复用 —— 张冠李戴且不报错。
+_MANIFEST = {}
+
+
+def _manifest(coll):
+    """返回 {序号: 文件名}；None 表示这个集合还没有映射表（首次启用，退回 mtime 判断）。"""
+    if coll not in _MANIFEST:
+        p = os.path.join(IMG, coll, "manifest.json")
+        if os.path.exists(p):
+            try:
+                _MANIFEST[coll] = json.load(open(p, encoding="utf-8"))
+            except Exception:
+                _MANIFEST[coll] = {}
+        else:
+            _MANIFEST[coll] = None
+    return _MANIFEST[coll]
+
+
+def _mapped(coll, idx, src):
+    m = _manifest(coll)
+    if m is None:
+        return True
+    return m.get(f"{idx:03d}") == os.path.basename(src)
+
+
+def _mark(coll, idx, src):
+    m = _manifest(coll)
+    if m is None:
+        m = _MANIFEST[coll] = {}
+    m[f"{idx:03d}"] = os.path.basename(src)
+
+
+def save_manifests():
+    for coll, m in _MANIFEST.items():
+        if m is None:
+            continue
+        os.makedirs(os.path.join(IMG, coll), exist_ok=True)
+        with open(os.path.join(IMG, coll, "manifest.json"), "w", encoding="utf-8") as fh:
+            json.dump(m, fh, ensure_ascii=False, indent=0, sort_keys=True)
+
+
+def prune_collection(coll, count):
+    """删掉序号超出现有条数的 t/l/f 产物（源文件被删后留下的孤儿）。"""
+    gone = 0
+    for path in glob.glob(os.path.join(IMG, coll, "*_*.webp")):
+        m = re.search(r"_([0-9]{3})\.webp$", path)
+        if m and int(m.group(1)) > count:
+            os.remove(path)
+            gone += 1
+    return gone
+
+
 def _done(path, src):
     """产物算不算"已经生成好了"：存在、非空、且不比源文件旧。
     只看存在性会被一次中断的写入永久钉死 —— 0 字节的 webp 既跳过重建，
@@ -75,7 +128,7 @@ def build_webp(src, coll, idx, large_src=None, force=False):
     rel_t = f"assets/img/{coll}/t_{idx:03d}.webp"
     rel_l = f"assets/img/{coll}/l_{idx:03d}.webp"
 
-    if not force and _done(t_path, src) and _done(l_path, src):
+    if not force and _mapped(coll, idx, src) and _done(t_path, src) and _done(l_path, src):
         with Image.open(src) as im:
             w, h = im.size
         return w, h, rel_t, rel_l
@@ -89,6 +142,7 @@ def build_webp(src, coll, idx, large_src=None, force=False):
         thumb = im.copy()
         thumb.thumbnail((THUMB_MAX, THUMB_MAX), Image.LANCZOS)
         thumb.save(t_path, "WEBP", quality=THUMB_Q, method=5)
+    _mark(coll, idx, src)
     return w, h, rel_t, rel_l
 
 
@@ -101,10 +155,11 @@ def build_full(src, coll, idx, force=False):
     with Image.open(src) as im:
         im = im.convert("RGB")
         w, h = im.size
-        if not force and _done(f_path, src):
+        if not force and _mapped(coll, idx, src) and _done(f_path, src):
             return rel, w, h
         big = max(w, h) > 3000
         im.save(f_path, "WEBP", quality=(88 if big else 90), method=(4 if big else 5))
+    _mark(coll, idx, src)
     return rel, w, h
 
 
@@ -116,7 +171,8 @@ def build_full_copy(src, coll, idx):
     ext = os.path.splitext(src)[1].lstrip(".").lower()
     f_path = os.path.join(out_dir, f"f_{idx:03d}.{ext}")
     rel = f"assets/img/{coll}/f_{idx:03d}.{ext}"
-    if not _done(f_path, src) or os.path.getsize(f_path) != os.path.getsize(src):
+    if not _mapped(coll, idx, src) or not _done(f_path, src) \
+            or os.path.getsize(f_path) != os.path.getsize(src):
         shutil.copyfile(src, f_path)
     with Image.open(src) as im:
         w, h = im.size
@@ -225,6 +281,8 @@ VERSION_META = {
                "人物不占画幅就带不动画风 —— 画风不在场景里。"),
     "v33 黄雨衣系列": ("第 33 轮", "换自己的角色：黄雨衣少女 × 八个世界", "关键结论",
                   "画风回来了。anime 画风由人物承载，不由风格词承载 —— 这是整条谱系最贵的一条。"),
+    "v34 百景": ("第 34 轮", "二十个互不相同的世界，人物各不相同", "扩展",
+               "同一套配方在四个轴（题材 / 时间 / 色调 / 机位）上同时拉开，验证画风能否脱离固定角色。"),
 }
 VERSION_ORDER = list(VERSION_META.keys())
 # 同一輪的散落標籤併入同一組
@@ -270,19 +328,48 @@ THEMES = {
     "phonebooth": ("电话亭", "磨砂玻璃与金属框"),
     "piano": ("钢琴", "湿沙上的琴盖与琴键"),
     "corridor": ("走廊", "一点透视的长廊"),
-    "crossing": ("道口", "铁轨、警示机与压顶的雷雨云"),
+    "crossing": ("道口", "铁轨、警示机与压顶的雷雨云；也有把人放到很远的一张"),
     "ramen": ("拉面店", "暖帘、柜台蒸汽与街对面的夜"),
     "whale": ("巨鲸", "淹没街道上的鲸与落日"),
-    "figure": ("远影", "空景里一个撑伞的小小人影"),
     "atrium": ("中庭", "环形楼层仰视的天井光"),
     "cat": ("猫", "窗台、蕾丝窗帘与怀里的黑猫"),
     "lighthouse": ("灯塔", "雪地栅栏、极光与塔顶的光"),
+    "desert": ("沙漠", "沙丘上的商队与公路尽头的加油站"),
+    "ice": ("冰原", "冰壁、暴风雪与冰湖上的落日"),
+    "greenhouse": ("温室", "维多利亚玻璃棚与清晨的雾气"),
+    "festival": ("祭典", "纸灯笼、摊位蒸汽与人潮"),
+    "workshop": ("车间", "车床、工具板与机油"),
+    "overpass": ("天桥", "雨里的钢梁与车灯"),
+    "sakura": ("樱花", "河堤两岸的花枝隧道"),
+    "star": ("星空", "云海之上的银河与望远镜"),
     "other": ("其他", "未标注场景的试验稿"),
 }
 
 # 场景码 → 主题的显式归并：画面主体是"荒废之物"时，算废墟而不是单开一类。
 SCENE_THEME = {
     "mecha": "ruins",     # 林间长满蕨类的旧机甲 —— 与断柱鸟居同属荒废
+    "figure": "crossing",  # v31 是道口机位、人放远 —— 同一处景，不另开一类
+    # v34 百景：语义相近的场景码并进同一个主题，别为一张图单开一类
+    "caravan": "desert", "gasstation": "desert",
+    "climber": "ice", "icelake": "ice",
+    "bookshop": "library", "stacks": "library",
+    "scarecrow": "field", "trainwindow": "train",
+    "snowkonbini": "konbini", "ruinpiano": "piano",
+    "greenhouse": "greenhouse", "festival": "festival",
+    "workshop": "workshop", "overpass": "overpass",
+    "sakura": "sakura", "stargazer": "star",
+}
+
+# v34 的场景码 → 中文短名（取自 风格复刻/scripts/run_v34.py 的 JOBS 表）
+SCENE_CN = {
+    "rider": "雨夜高架上的骑手", "caravan": "正午沙漠里的商队", "climber": "暴风雪里的攀登者",
+    "greenhouse": "清晨的玻璃温室", "diver": "深潜者与光柱", "bookshop": "旧书店的午后",
+    "boxer": "拳台顶灯下的拳手", "festival": "夏日祭的灯笼下", "icelake": "冰湖上的日落",
+    "workshop": "车间里的机械师", "overpass": "天桥上的雨", "scarecrow": "麦田里的稻草人",
+    "kite": "天台上的风筝", "trainwindow": "车厢窗边的旅人", "stacks": "书库高架上的少女",
+    "snowkonbini": "雪夜的便利店", "gasstation": "沙漠公路的加油站",
+    "sakura": "樱花隧道里的自行车", "ruinpiano": "废墟里的钢琴师", "stargazer": "星空下的观测者",
+    "figure": "道口远影",
 }
 
 # 无场景码时按提示词关键词兜底（顺序即优先级：越靠前越是"画面主体"）
@@ -319,8 +406,18 @@ PROMPT_THEME = [
 ]
 
 
+CN_NUM = "零一二三四五六七八九十"
+
+
+def _cn_num(n):
+    return CN_NUM[n] if n <= 10 else str(n)
+
+
 def make_title(scene, stem, theme_name):
-    """场景码 + 中文主题；只有单词场景就只用主题；没场景就用文件名前缀。"""
+    """中文场景名 > 场景码 + 主题 > 只有单词场景就只用主题 > 文件名前缀。"""
+    key = (scene or "").strip().lower()
+    if key in SCENE_CN:
+        return SCENE_CN[key]
     if scene and scene != "—":
         m = re.match(r"^([A-Za-z]{0,2}\d+)", scene)
         if m:
@@ -384,6 +481,17 @@ def build_comfy():
         it["theme"] = classify_theme(it["scene"], it["prompt"])
         it["themeName"] = THEMES[it["theme"]][0]
         it["title"] = make_title(it["scene"], it["stem"], it["themeName"])
+
+    # 同一场景出多张时（caravan ×2、climber ×2），标题补「之二 / 之三」
+    seen = {}
+    for it in items:
+        t = it["title"]
+        n = seen.get(t, 0)
+        seen[t] = n + 1
+        if n:
+            it["title"] = f"{t} · 之{_cn_num(n + 1)}"
+
+    print(f"  清理孤儿产物 {prune_collection('comfy', len(files))} 个")
 
     groups = []
     for v in VERSION_ORDER:
@@ -609,6 +717,7 @@ def main():
     if only in ("all", "bg"):
         print("[C] 纯背景")
         emit("bg", build_backgrounds())
+    save_manifests()
     print(f"done in {time.time()-t0:.1f}s")
 
 

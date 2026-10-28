@@ -199,6 +199,8 @@
   const total = C.items.length + K.items.length + bgCount;
   $("#statTotal").textContent = total;
 
+  // 轮次取版本分组名里的最大编号（v34 百景 → 34），别写死
+  const rounds = Math.max(...C.groups.map(g => Number((g.name.match(/v(\d+)/) || [0, 0])[1])));
   const pick = (items, re, fallback = 0) => items.find(i => re.test(i.file)) || items[fallback];
   const layoutSer = B.series.find(s => s.key === "layout") || B.series[0];
   // 「新排布六类」的组图（六张拼在一张总览里），比单张更能说明这一组是什么
@@ -208,7 +210,7 @@
     {
       href: "comfyui.html", no: "01", title: "画风所寄", count: C.items.length,
       latin: "My Favourite High Quality",
-      desc: "Qwen-Image 2.1 Turbo 单模型、纯提示词控制，探索本地 AI 模型能否复现 NovelAI 的激进生图风格。33 轮迭代、84 张存档，全程不进后期。名字来自最后那条结论：画风寄在人物身上，不寄在风格词里。",
+      desc: `Qwen-Image 2.1 Turbo 单模型、纯提示词控制，探索本地 AI 模型能否复现 NovelAI 的激进生图风格。${rounds} 轮迭代、${C.items.length} 张存档，全程不进后期。名字来自最后那条结论：画风寄在人物身上，不寄在风格词里。`,
       tags: ["扩散模型", "纯提示词", "无后期"],
       focus: "介入重心：提示词措辞与量化筛选",
       cover: pick(C.items, /whale/i)
