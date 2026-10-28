@@ -398,7 +398,7 @@
       const hadPrev = !!prevSrc && this.img.classList.contains("is-in");
 
       const token = ++this._token;
-      const rapid = this.isRapid();
+      const mode = dx ? "slide" : this.navMode();
       const largeSrc = it.large || it.thumb;
       const fullSrc = it.full && it.full !== it.large ? it.full : null;
       this._fullSrc = fullSrc;
@@ -409,7 +409,8 @@
       const hit = this._cache.get(largeSrc);
       if (hit && hit.ready) {
         // 已预取并解码：直接同步上屏，点击即切换
-        if (rapid) this.cutTo(largeSrc);
+        if (mode === "cut") this.cutTo(largeSrc);
+        else if (mode === "quick") this.quickTo(largeSrc, dir);
         else this.paintNext(it, { src: largeSrc }, hadPrev, prevSrc, dir, dx);
         this.preloadNeighbors(i);
       } else {
@@ -420,7 +421,8 @@
         const paint = () => {
           if (painted || token !== this._token) return;
           painted = true;
-          if (rapid) this.cutTo(next.src);
+          if (mode === "cut") this.cutTo(next.src);
+          else if (mode === "quick") this.quickTo(next.src, dir);
           else this.paintNext(it, next, hadPrev, prevSrc, dir, dx);
         };
         // 解码完成再动画面，避免新 img 先顶着旧位图滑进来再被顶掉；
@@ -482,12 +484,14 @@
       btn.textContent = clamped ? "展开" : "收起";
     },
 
-    /** 是否处于连击（两次切图间隔很短）：连击时改用就地换图，不重放滑动 */
-    isRapid() {
+    /** 切图节奏：cut=极快连击，quick=较快，slide=正常（保留完整滑动） */
+    navMode() {
       const now = performance.now();
       const gap = now - (this._lastNav || 0);
       this._lastNav = now;
-      return gap < 380;
+      if (gap < 130) return "cut";
+      if (gap < 380) return "quick";
+      return "slide";
     },
 
     /** 上一次滑动还没结束时的连击：不重放整段滑出动画，就地换图（否则每点一次都把画面甩出屏幕，看起来像卡住） */
@@ -507,6 +511,44 @@
       this.measure();
       this.refreshRect();
       this.apply(false);
+    },
+
+    /** 连击时的短滑入：只偏 6% 再归位，既有方向感又不至于把画面甩出屏幕 */
+    quickTo(src, dir) {
+      clearTimeout(this._slideTimer);
+      this.slideBusy = true;
+      this._pendingFull = null;
+      const g = this.ghost;
+      g.hidden = true;
+      g.removeAttribute("src");
+      g.classList.remove("is-slide");
+
+      this.img.classList.remove("is-anim", "is-slide", "is-quick");
+      this.img.src = src;
+      this._shown = true;
+      this.img.classList.add("is-in");
+      this.measure();
+      this.refreshRect();
+
+      const off = (dir >= 0 ? 1 : -1) * Math.max(24, (this._rw || 800) * 0.06);
+      this.slide = off;
+      this.apply(false);
+      void this.img.offsetWidth;          // 先把起点画上去
+      this.img.classList.add("is-quick");
+      this.slide = 0;
+      this.apply(false);
+
+      this._slideTimer = setTimeout(() => {
+        this.img.classList.remove("is-quick");
+        this.slideBusy = false;
+        this.measure();
+        if (this._pendingFull) {
+          const p = this._pendingFull;
+          this._pendingFull = null;
+          this.img.src = p;
+          requestAnimationFrame(() => { this.measure(); this.apply(false); });
+        }
+      }, 150);
     },
 
     /** 预取并预解码：左右切换要用的下一张，提前放进内存，点击时零等待 */

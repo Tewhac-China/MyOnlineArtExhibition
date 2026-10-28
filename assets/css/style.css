@@ -560,12 +560,14 @@ body.theme-collage .wall { --min: 168px; }
   z-index: 1; pointer-events: none; opacity: 1;
 }
 .lb__img { position: relative; z-index: 2; }
+.lb__stage img.is-quick { transition: transform .12s cubic-bezier(.2,.7,.3,1); }
 .lb__stage img.is-slide {
   transition: transform .38s cubic-bezier(.2,.72,.24,1);
   box-shadow: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .lb__stage img.is-slide { transition-duration: .01s; }
+  .lb__stage img.is-quick { transition: transform .12s cubic-bezier(.2,.7,.3,1); }
+.lb__stage img.is-slide { transition-duration: .01s; }
 }
 
 /* 缩放工具条 */
