@@ -24,8 +24,10 @@ function wait(ms){ return new Promise(function(r){setTimeout(r,ms)}); }
       var r=el.getBoundingClientRect();
       var scroller=false;
       for(var a=el.parentElement;a;a=a.parentElement){
-        var ox=getComputedStyle(a).overflowX;
-        if(ox==='auto'||ox==='scroll'){ scroller=true; break; }
+        var cs2=getComputedStyle(a);
+        if(cs2.overflowX==='auto'||cs2.overflowX==='scroll'){ scroller=true; break; }
+        // 被祖先裁掉的装饰层（比如放大 3% 的首屏背景）不算越界
+        if(cs2.overflow==='hidden'||cs2.overflowX==='hidden'){ scroller=true; break; }
       }
       if(!scroller && r.width>0 && r.right>de.clientWidth+1 && getComputedStyle(el).position!=='fixed'){
         over.push(el.tagName+'.'+String(el.className).slice(0,18)+'@'+Math.round(r.right));
