@@ -242,6 +242,9 @@ def prettify_scene(scene):
 
 
 # ---------------------------------------------------------- 主题归类
+# 主题展示的置顶顺序
+THEME_PRIORITY = ["whale", "crossing", "billboard"]
+
 THEMES = {
     "stage": ("舞台", "聚光灯、音箱堆与湿地板"),
     "theater": ("剧场", "金箔拱门与红丝绒座椅"),
@@ -412,6 +415,10 @@ def build_comfy():
                 vers.append(it["group"])
         theme_groups.append({"key": k, "name": name, "desc": desc,
                              "versions": vers, "items": sel})
+
+    # 主视觉优先：巨鲸 → 道口 → 广告牌，其余按张数
+    theme_groups.sort(key=lambda g: THEME_PRIORITY.index(g["key"])
+                      if g["key"] in THEME_PRIORITY else len(THEME_PRIORITY))
 
     return {"items": items, "groups": groups, "themes": theme_groups}
 

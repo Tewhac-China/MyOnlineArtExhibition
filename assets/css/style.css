@@ -317,9 +317,15 @@ body::before {
 .series-hero__bg {
   position: absolute; inset: 0; z-index: 0;
   background-size: cover; background-position: center 30%;
-  opacity: .26; filter: grayscale(.3) blur(1px);
+  opacity: .42; filter: grayscale(.25) blur(.5px);
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
   mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
+}
+.series-hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(10,10,11,.95) 0%, rgba(10,10,11,.84) 42%, rgba(10,10,11,.28) 74%, rgba(10,10,11,.62) 100%),
+    linear-gradient(to top, var(--bg) 0%, transparent 40%);
 }
 .series-hero__in { position: relative; z-index: 1; max-width: var(--max); margin: 0 auto; }
 .series-hero h1 {
