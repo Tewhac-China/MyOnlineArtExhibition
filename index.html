@@ -200,7 +200,9 @@
   $("#statTotal").textContent = total;
 
   const pick = (items, re, fallback = 0) => items.find(i => re.test(i.file)) || items[fallback];
-  const bgItems = (B.series.find(s => s.key === "bg20c") || B.series[0]).items;
+  const layoutSer = B.series.find(s => s.key === "layout") || B.series[0];
+  // 「新排布六类」的组图（六张拼在一张总览里），比单张更能说明这一组是什么
+  const bgCover = layoutSer.overview || layoutSer.items[0];
 
   const defs = [
     {
@@ -225,13 +227,14 @@
       desc: "素材库照片 + 色轴映射 + 程序化光效，五个系列、无人无字的纯背景。色轴取自 54 张真实封面的调色板。",
       tags: ["程序化合成", "色轴映射", "1400–8000px"],
       focus: "介入重心：为每一景挑素材与色轴",
-      cover: pick(bgItems, /彼岸花野/)
+      cover: bgCover, contain: true,
+      hero: pick((B.series.find(s => s.key === "bg20c") || B.series[0]).items, /彼岸花野/)
     }
   ];
 
   $("#cards").innerHTML = defs.map(d => `
     <a class="card rise" href="${d.href}">
-      <div class="card__media">
+      <div class="card__media${d.contain ? " card__media--contain" : ""}">
         <span class="card__no">${d.no}</span>
         <img src="${d.cover.large}" alt="${esc(d.title)}" loading="lazy">
       </div>
@@ -248,7 +251,7 @@
 
   // hero 背景三联
   const bgEls = document.querySelectorAll("#heroBg div");
-  [defs[0].cover, defs[1].cover, defs[2].cover].forEach((c, i) => {
+  [defs[0].cover, defs[1].cover, defs[2].hero || defs[2].cover].forEach((c, i) => {
     if (bgEls[i]) bgEls[i].style.backgroundImage = `url("${c.large}")`;
   });
 
