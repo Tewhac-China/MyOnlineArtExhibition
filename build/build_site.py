@@ -316,6 +316,18 @@ PROMPT_THEME = [
 ]
 
 
+def make_title(scene, stem, theme_name):
+    """场景码 + 中文主题；只有单词场景就只用主题；没场景就用文件名前缀。"""
+    if scene and scene != "—":
+        m = re.match(r"^([A-Za-z]{0,2}\d+)", scene)
+        if m:
+            return f"{theme_name} · {m.group(1).upper()}"
+        return theme_name
+    if len(stem) <= 6 and "_" not in stem:
+        return f"{theme_name} · {stem}"
+    return stem
+
+
 def classify_theme(scene, prompt):
     """先看场景码；没有码时，先拿提示词开头那句「机位 + 前景近物」判断，
     判不出来再全文兜底 —— 全文里的比喻（mirror sharp / mirrors the lamps）会骗人。"""
@@ -348,10 +360,9 @@ def build_comfy():
         fp, fw, fh = build_full(src, "comfy", i)
         meta = comfy_prompt_meta(src)
         row = rows.get(f, {})
-        stem = re.sub(r"_\d{6}_\d_0*1_\.png$", "", f)
-        stem = stem.replace("_.png", "")
+        stem = re.sub(r"(_\d+)+_?\.png$", "", f)
         scene = row.get("scene") or ""
-        title = prettify_scene(scene) or stem
+        title = stem
         items.append({
             "id": f"c{i:03d}", "file": f, "title": title, "stem": stem,
             "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh,
@@ -369,6 +380,7 @@ def build_comfy():
         it["group"] = VERSION_ALIAS.get(it["version"], it["version"])
         it["theme"] = classify_theme(it["scene"], it["prompt"])
         it["themeName"] = THEMES[it["theme"]][0]
+        it["title"] = make_title(it["scene"], it["stem"], it["themeName"])
 
     groups = []
     for v in VERSION_ORDER:

@@ -31,12 +31,25 @@
   function reveals() {
     const els = $$(".rise:not(.is-in)");
     if (!els.length) return;
+    const show = el => el.classList.add("is-in");
+
+    // 已经在视口里的，直接显示，不等观察器回调（否则首屏内容会空白一拍）
+    const vh = window.innerHeight || 800;
+    els.forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.96 && r.bottom > 0) show(el);
+    });
+
+    if (!("IntersectionObserver" in window)) { els.forEach(show); return; }
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => {
-        if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
+        if (e.isIntersecting) { show(e.target); io.unobserve(e.target); }
       });
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
-    els.forEach(el => io.observe(el));
+    els.forEach(el => { if (!el.classList.contains("is-in")) io.observe(el); });
+
+    // 兜底：观察器异常时也不让内容永久隐形
+    setTimeout(() => $$(".rise:not(.is-in)").forEach(show), 1600);
   }
 
   /* ---------------------------------------------------- 燈箱 · 圖片查看器 */
@@ -52,6 +65,9 @@
       if (this.root) return;
       const root = document.createElement("div");
       root.className = "lb";
+      root.setAttribute("role", "dialog");
+      root.setAttribute("aria-modal", "true");
+      root.setAttribute("aria-label", "作品查看器");
       root.innerHTML = `
         <button class="lb__close" aria-label="关闭">✕</button>
         <button class="lb__info-btn" aria-label="信息面板">ⓘ</button>
@@ -83,6 +99,10 @@
 
       $(".lb__close", root).addEventListener("click", () => this.close());
       $(".lb__info-btn", root).addEventListener("click", () => root.classList.toggle("info-off"));
+      this.info.addEventListener("click", e => {
+        const b = e.target.closest(".lb__prompt-t");
+        if (b) this.togglePrompt(b);
+      });
       $(".prev", root).addEventListener("click", e => { e.stopPropagation(); this.go(-1); });
       $(".next", root).addEventListener("click", e => { e.stopPropagation(); this.go(1); });
 
@@ -404,8 +424,9 @@
       this.img.alt = it.title || "";
 
       // 原图（原始分辨率）随后接管，保证大图展示时是最清晰的版本
+      const resText = fullSrc ? "载入原图…" : `原图 · ${it.fw || it.w} × ${it.fh || it.h}`;
+      const resState = fullSrc ? "loading" : "ready";
       if (fullSrc) {
-        this.setRes("载入原图…", "loading");
         const big = new Image();
         big.onload = () => {
           if (token !== this._token) return;
@@ -419,8 +440,6 @@
         };
         big.onerror = () => { if (token === this._token) this.setRes("原图载入失败", "error"); };
         big.src = fullSrc;
-      } else {
-        this.setRes(`原图 · ${it.fw || it.w} × ${it.fh || it.h}`, "ready");
       }
 
       const rows = (cfg.rows ? cfg.rows(it) : []).filter(r => r && r[1] != null && r[1] !== "");
@@ -433,13 +452,21 @@
         ${grp ? `<div class="lb__grp">${esc(grp)}</div>` : ""}
         <h3 class="lb__title">${esc(it.title || "")}</h3>
         <div class="lb__file">${esc(it.file || "")}</div>
-        <div class="lb__res" data-state="loading">载入原图…</div>
+        <div class="lb__res" data-state="${resState}">${resText}</div>
         <dl class="lb__rows">
           ${rows.map(([k, v]) => `<div class="lb__row"><dt>${esc(k)}</dt><dd>${esc(String(v))}</dd></div>`).join("")}
         </dl>
-        ${prompt ? `<div class="lb__prompt-h"><span>原始提示词</span><span>${prompt.length} 字符</span></div>
-        <pre class="lb__prompt">${esc(prompt)}</pre>` : ""}`;
+        ${prompt ? `<div class="lb__prompt-h"><span>原始提示词 · ${prompt.length} 字符</span>
+          <button class="lb__prompt-t" type="button">展开</button></div>
+        <pre class="lb__prompt is-clamped">${esc(prompt)}</pre>` : ""}`;
       this.info.scrollTop = 0;
+    },
+
+    togglePrompt(btn) {
+      const pre = $(".lb__prompt", this.info);
+      if (!pre) return;
+      const clamped = pre.classList.toggle("is-clamped");
+      btn.textContent = clamped ? "展开" : "收起";
     },
 
     /** 位图就绪后真正上屏：原图若先到就直接上原图，否则先上快图再替换 */
@@ -570,9 +597,10 @@
           ${it.badge ? `<span class="shot__tag">${esc(it.badge)}</span>` : ""}
         </div>`;
       const img = $("img", d);
-      img.addEventListener("load", () => img.classList.add("is-in"), { once: true });
-      img.addEventListener("error", () => img.classList.add("is-in"), { once: true });
-      if (img.complete) img.classList.add("is-in");
+      const done = () => { img.classList.add("is-in"); d.classList.add("is-loaded"); };
+      img.addEventListener("load", done, { once: true });
+      img.addEventListener("error", done, { once: true });
+      if (img.complete) done();
       d.addEventListener("click", () => {
         const seq = shotSequence();
         const idx = Math.max(0, seq.items.indexOf(it));
@@ -583,7 +611,11 @@
     el.appendChild(frag);
     // 兜底：任何情况下 2.5s 后都让图片显形，避免加载事件丢失导致空白
     setTimeout(() => {
-      $$(".shot img", el).forEach(im => im.classList.add("is-in"));
+      $$(".shot", el).forEach(d => {
+        const im = $("img", d);
+        if (im) im.classList.add("is-in");
+        d.classList.add("is-loaded");
+      });
     }, 2500);
   }
 
@@ -600,6 +632,17 @@
     }));
   }
 
-  window.Site = { $, $$, esc, chrome, reveals, wall, filters, LB };
+  /** 筛选后如果当前滚动位置已经越过第一个可见分组，把它拉回视野 */
+  function jumpToFirstVisible(root) {
+    const first = Array.from(root.children).find(el => el.style.display !== "none");
+    if (!first) return;
+    const top = first.getBoundingClientRect().top;
+    if (top < 70) {
+      const y = window.scrollY + top - 78;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  }
+
+  window.Site = { $, $$, esc, chrome, reveals, wall, filters, LB, jumpToFirstVisible };
   document.addEventListener("DOMContentLoaded", () => { chrome(); reveals(); });
 })();
