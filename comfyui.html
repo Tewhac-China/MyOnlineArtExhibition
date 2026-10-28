@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>舞台与少女 · My Favourite High Quality</title>
-<meta name="description" content="Qwen-Image 2.1 Turbo 纯提示词系列：74 张、28 轮迭代、零像素后期。">
+<title>画风所寄 · My Favourite High Quality</title>
+<meta name="description" content="Qwen-Image 2.1 Turbo 纯提示词系列：84 张、33 轮迭代、零像素后期。">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="theme-comfy">
@@ -16,7 +16,7 @@
   </a>
   <nav class="nav">
     <a href="index.html">首页</a>
-    <a href="comfyui.html" class="is-active"><span class="idx">01</span>舞台与少女</a>
+    <a href="comfyui.html" class="is-active"><span class="idx">01</span>画风所寄</a>
     <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
     <a href="backgrounds.html"><span class="idx">03</span>东方纯背景</a>
   </nav>
@@ -27,16 +27,17 @@
     <div class="series-hero__bg" id="heroBg"></div>
     <div class="series-hero__in">
       <div class="kicker">系列 01 / 03 · 扩散模型 · 纯提示词</div>
-      <h1>舞台与少女</h1>
+      <h1>画风所寄</h1>
       <p class="latin">My Favourite High Quality &nbsp;·&nbsp; Qwen-Image 2.1 Turbo</p>
       <p class="lede">
         一个模型、一条固定的 sigma 曲线、一段手写提示词，2048×1408 出图后降采样，然后结束。
         没有第二个模型、没有 ControlNet、没有后期。要复刻的是「日本动画 MV 截帧」那种细线厚涂的画法 ——
-        28 轮迭代之后，这件事只在提示词里成立。
+        33 轮迭代之后，这件事只在提示词里成立。
+        画里的人也换过一轮：先是黑裙金发的她，站在舞台与剧场里；后来是黄雨衣与透明伞的她，走到道口、灯塔、机甲与洪水里的鲸旁边。
       </p>
       <div class="statrow">
-        <div><b>74</b><span>张存档</span></div>
-        <div><b>28</b><span>轮迭代</span></div>
+        <div><b>84</b><span>张存档</span></div>
+        <div><b>33</b><span>轮迭代</span></div>
         <div><b>8 / 16</b><span>步采样</span></div>
         <div><b>0</b><span>次像素后期</span></div>
       </div>
@@ -73,8 +74,11 @@
           <p>最贵的三条经验，全部是踩出来的：<strong>细线不是粗墨线</strong> —— 写 <code>bold ink outlines</code> 会直接出矢量图；
             <strong>黑裙必须写成「深炭灰 + 紫蓝反光」</strong> —— 否则模型给一块纯黑剪影，这是人物细节差的最大来源；
             <strong>「整体逆光」写不得</strong> —— Qwen 会把整张图一起压暗（edge 0.128 → 0.066），轮廓光只能用加法的。</p>
-          <p>28 轮迭代，被推翻的路线有三条：半写实 CG（太像 3D 动画电影，不是手绘）、平涂矢量（纯色块 + 硬边 + 零纹理）、
-            以及 14 步后期调色流水线 —— 能出效果，但结论是「全都是在补提示词的债」，之后整条推翻。
+          <p>33 轮迭代，被推翻的路线有四条：半写实 CG（太像 3D 动画电影，不是手绘）、平涂矢量（纯色块 + 硬边 + 零纹理）、
+            14 步后期调色流水线（能出效果，但结论是「全都是在补提示词的债」，之后整条推翻），
+            以及 v29 的「无人称大场景」—— 洪水里的鲸、雷雨道口、街对面的拉面摊，构图与光都成立，画风却跑成了摄影：没有细线，也没有笔触。
+            v31 往同样的场景里补一个远处的小人物，仍然是摄影；直到 v33 换成自己的角色（黄雨衣少女）走进八个世界，画风才回来。
+            <strong>anime 画风由人物承载，不由风格词承载</strong> —— 这是整条谱系里最贵的一条结论。
             定稿的 v23 配方只做三件事：中间调锚点、黑裙不黑、填满画面。</p>
           <p><strong>已知局限，别在这上面浪费时间。</strong>Qwen 给不出真正的手绘颗粒（<code>oil impasto</code>、<code>gouache</code>、
             <code>canvas weave</code> 这类材质词完全无效，出图与不加一模一样）；整体偏暗一档（p50 0.09–0.24，参考中位数 0.258）；
@@ -127,7 +131,7 @@
           <div class="dim__name">提示词与参数<small>PROMPT &amp; PARAMS</small></div>
           <div class="dim__body">
             <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>5 / 5</span></div>
-            <p class="dim__note">七段骨架逐字手写，28 轮改写。8 步的 sigma 曲线、cfg 1.0、2048×1408 都不是默认值，
+            <p class="dim__note">七段骨架逐字手写，33 轮改写。8 步的 sigma 曲线、cfg 1.0、2048×1408 都不是默认值，
               是逐项对照实验得出（cfg 2.0 会拉平布料、原生 1578 人群会糊、16 步 edgeN 翻倍）。</p>
           </div>
         </div>
@@ -170,7 +174,7 @@
       <div class="sec-head rise">
         <div class="sec-head__num">03 / WORKS</div>
         <div>
-          <h2>74 张，按主题归类</h2>
+          <h2>84 张，按主题归类</h2>
           <p>同一套配方在二十来个场景里各跑一遍：舞台、剧场、麦田、屋顶、废墟、镜厅、列车、神社……
             可以切成「按主题」或「按版本谱系」两种看法。点开任意一张可看到种子、步数、p50 / edgeN 与完整原始提示词。</p>
         </div>
@@ -190,8 +194,8 @@
   <div class="foot__in">
     <div>
       <h5>关于这一组</h5>
-      <p>74 张 PNG，文件名为原始输出名；每张内嵌完整 prompt 元数据，本站的提示词即由此读出。</p>
-      <p>同一角色、同一配方，二十来个场景各出一版，用来验证配方在不同题材上的稳定性。</p>
+      <p>84 张 PNG，文件名为原始输出名；每张内嵌完整 prompt 元数据，本站的提示词即由此读出。</p>
+      <p>同一配方在二十来个场景里各出一版，验证它在不同题材上是否成立。多数画里有人；v29 / v31 那几张无人称的空景是故意留下的对照组 —— 它们正是「画风由人物承载」这条结论的反证。</p>
     </div>
     <div>
       <h5>本页字体</h5>

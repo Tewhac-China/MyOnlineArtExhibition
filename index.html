@@ -16,7 +16,7 @@
   </a>
   <nav class="nav">
     <a href="index.html" class="is-active">首页</a>
-    <a href="comfyui.html"><span class="idx">01</span>舞台与少女</a>
+    <a href="comfyui.html"><span class="idx">01</span>画风所寄</a>
     <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
     <a href="backgrounds.html"><span class="idx">03</span>东方纯背景</a>
   </nav>
@@ -155,7 +155,7 @@
             取自该系列的风格解析记录；背景系列的生成器与色轴来源取自各自的脚本注释与说明。</p>
         </div>
         <div class="prose">
-          <p><strong>一个必须说清楚的区别。</strong>三个系列里，只有「舞台与少女」是扩散模型生成的。
+          <p><strong>一个必须说清楚的区别。</strong>三个系列里，只有「画风所寄」是扩散模型生成的。
             「千禧迷思」与「东方纯背景」不含任何扩散模型输出 —— 它们是 Pillow / NumPy 写成的渲染管线，
             素材来自照片库与原封面色板。把它们并置，是因为三者面对的是同一个问题：
             <strong>人的判断在哪里进场，机器的手在哪里接管。</strong></p>
@@ -180,7 +180,7 @@
     </div>
     <div>
       <h5>索引</h5>
-      <p><a href="comfyui.html">01 舞台与少女</a></p>
+      <p><a href="comfyui.html">01 画风所寄</a></p>
       <p><a href="collage.html">02 千禧迷思</a></p>
       <p><a href="backgrounds.html">03 东方纯背景</a></p>
     </div>
@@ -204,9 +204,9 @@
 
   const defs = [
     {
-      href: "comfyui.html", no: "01", title: "舞台与少女", count: C.items.length,
+      href: "comfyui.html", no: "01", title: "画风所寄", count: C.items.length,
       latin: "My Favourite High Quality",
-      desc: "Qwen-Image 2.1 Turbo 单模型、纯提示词控制，复刻「日本动画 MV 截帧」的细线厚涂画法。28 轮迭代、74 张存档，全程不进后期。",
+      desc: "Qwen-Image 2.1 Turbo 单模型、纯提示词控制，复刻「日本动画 MV 截帧」的细线厚涂画法。33 轮迭代、84 张存档，全程不进后期。名字来自最后那条结论：画风寄在人物身上，不寄在风格词里。",
       tags: ["扩散模型", "纯提示词", "无后期"],
       focus: "介入重心：提示词措辞与量化筛选",
       cover: pick(C.items, /v23_C2_garden|v28_017_shrine/)
