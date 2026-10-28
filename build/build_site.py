@@ -14,7 +14,7 @@
   assets/img/<collection>/{t,l}_NNN.webp     缩略图 / 大图
   assets/data/*.js                           window.__DATA_* 数据
 """
-import os, re, json, glob, sys, time
+import os, re, json, glob, sys, time, shutil
 from PIL import Image
 
 try:
@@ -51,6 +51,7 @@ def _load_sources():
 
 LARGE_MAX, LARGE_Q = 1600, 86
 THUMB_MAX, THUMB_Q = 640, 76
+HD_MAX = 2200          # 8K 源的快图档：比普通快图高一档，又不甩原图
 
 for d in (IMG, DATA):
     os.makedirs(d, exist_ok=True)
@@ -107,15 +108,34 @@ def build_full(src, coll, idx, force=False):
     return rel, w, h
 
 
+def build_full_copy(src, coll, idx):
+    """源本身已经是压好的网络格式（JPEG/WebP）且就是目标分辨率时，直接复制。
+    再编码一次就是第二代损失，白掉画质。返回 (rel, w, h)。"""
+    out_dir = os.path.join(IMG, coll)
+    os.makedirs(out_dir, exist_ok=True)
+    ext = os.path.splitext(src)[1].lstrip(".").lower()
+    f_path = os.path.join(out_dir, f"f_{idx:03d}.{ext}")
+    rel = f"assets/img/{coll}/f_{idx:03d}.{ext}"
+    if not _done(f_path, src) or os.path.getsize(f_path) != os.path.getsize(src):
+        shutil.copyfile(src, f_path)
+    with Image.open(src) as im:
+        w, h = im.size
+    return rel, w, h
+
+
 def build_large_only(src, coll, idx, force=False):
     """仅用高分辨率源（8K）出大图，缩略图沿用已有。"""
     out_dir = os.path.join(IMG, coll)
     l_path = os.path.join(out_dir, f"l_{idx:03d}.webp")
+    # 不能只看 mtime：build_webp 前一步刚写过同名文件，mtime 必然更新，
+    # 那样这一档会永远停在 1600，8K 系列升不到 2200。要按实际尺寸判。
     if not force and _done(l_path, src):
-        return f"assets/img/{coll}/l_{idx:03d}.webp"
+        with Image.open(l_path) as im:
+            if max(im.size) >= HD_MAX:
+                return f"assets/img/{coll}/l_{idx:03d}.webp"
     with Image.open(src) as im:
         im = im.convert("RGB")
-        im.thumbnail((2200, 2200), Image.LANCZOS)
+        im.thumbnail((HD_MAX, HD_MAX), Image.LANCZOS)
         im.save(l_path, "WEBP", quality=88, method=5)
     return f"assets/img/{coll}/l_{idx:03d}.webp"
 
@@ -457,9 +477,10 @@ BG_SERIES = [
         "sub": "8000 × 8000 原生渲染", "generator": "birthday_card*.py",
         "note": "六种贺图排布的纯背景版，直接按 8K 画布出图；1080p 版为同一构图的降采样。",
         "overview": "新排布背景总览.png", "prefix": "b", "hd": "新排布六类_1080p",
+        "cards": "新排布贺图",   # 同名成品卡（带标题），排在纯背景前面
     },
     {
-        "key": "birthday", "dir": "", "name": "生日贺图背景 12 张",
+        "key": "birthday", "dir": "", "name": "明快氛围",
         "sub": "同配方 · 十种色调 + 两版基础", "generator": "birthday_variants.py --notitle",
         "note": "同一套妖精大战争配方管线，只换色轴、素材配比、花串色与标题色，去掉标题即为纯背景。",
         "overview": "生日贺图背景10张总览.png", "prefix": "b",
@@ -497,6 +518,28 @@ def build_backgrounds():
                     fp, fw, fh = build_full(op, "bg", idx)
                 ov = {"id": f"g{idx:03d}", "title": "系列总览", "thumb": t, "large": l,
                       "full": fp, "w": w, "h": h, "fw": fw, "fh": fh, "file": s["overview"]}
+        # 成品卡（带标题）排在同组纯背景前面。两边文件名同名，靠 kind 区分。
+        if s.get("cards"):
+            cdir = os.path.join(SRC_BG, s["cards"])
+            cfiles = sorted(f for f in os.listdir(cdir)
+                            if f.lower().endswith((".jpg", ".jpeg"))
+                            and "_compressed" in f.lower()
+                            and "总览" not in f)
+            for f in cfiles:
+                idx += 1
+                p = os.path.join(cdir, f)
+                w, h, t, l = build_webp(p, "bg", idx)
+                fp, fw, fh = build_full_copy(p, "bg", idx)   # 他压好的 JPG，直接复制不再编码
+                card = {"id": f"g{idx:03d}", "file": f,
+                        "title": _t2s(re.sub(r"_compressed$", "", os.path.splitext(f)[0])),
+                        "thumb": t, "large": l, "full": fp,
+                        "w": w, "h": h, "fw": fw, "fh": fh,
+                        "kind": "成品卡面", "badge": "成品"}
+                if s.get("hd") and max(w, h) > 2000:          # 卡与纯背景同画幅，快图同档
+                    card["large"] = build_large_only(p, "bg", idx)
+                    card["big"] = f"{w} × {h}"
+                items.append(card)
+                print(f"  bg {s['key']} 卡面 {len(items)}/{len(cfiles)} {f}", flush=True)
         for f in files:
             idx += 1
             p = os.path.join(SRC_BG, s["dir"], f) if s["dir"] else os.path.join(SRC_BG, f)
@@ -510,6 +553,8 @@ def build_backgrounds():
                 fp, fw, fh = build_full(p, "bg", idx)
             item = {"id": f"g{idx:03d}", "file": f, "title": title,
                     "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh}
+            if s.get("cards"):
+                item["kind"] = "纯背景"     # 与前面的成品卡对照
             # 8K 版：用高分辨率源替换大图
             if s.get("hd") and max(w, h) > 2000:
                 item["large"] = build_large_only(p, "bg", idx)

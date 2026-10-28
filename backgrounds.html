@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>东方纯背景 · Touhou Backgrounds</title>
-<meta name="description" content="五个系列、百余张无人无字的纯背景：素材库照片 + 色轴映射 + 程序化光效。">
+<title>东方风背景图 · Touhou Backgrounds</title>
+<meta name="description" content="五个系列、百余张无人无字的纯背景：模仿东方Project系列作品封面的背景图设计，素材库照片 + 色轴映射 + 程序化光效。">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="theme-bg">
@@ -18,7 +18,7 @@
     <a href="index.html">首页</a>
     <a href="comfyui.html"><span class="idx">01</span>画风所寄</a>
     <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
-    <a href="backgrounds.html" class="is-active"><span class="idx">03</span>东方纯背景</a>
+    <a href="backgrounds.html" class="is-active"><span class="idx">03</span>东方风背景图</a>
   </nav>
 </header>
 
@@ -27,11 +27,16 @@
     <div class="series-hero__bg" id="heroBg"></div>
     <div class="series-hero__in">
       <div class="kicker">系列 03 / 03 · 程序化合成 · 色轴映射</div>
-      <h1>东方纯背景</h1>
+      <h1>东方风背景图</h1>
       <p class="latin">Touhou Backgrounds &nbsp;·&nbsp; Palette-Mapped Compositing</p>
       <p class="lede">
         素材库照片、一条从原封面里量出来的色轴、一个程序化的光源 —— 五个系列、百余张无人无字的纯背景。
         它们的任务不是被观看，而是被叠上内容：人物、标题、印章，都在这一层之上。
+      </p>
+      <p class="lede attrib">
+        <strong>这一组的定位是仿作。</strong>模仿的是 <b>东方Project（Touhou）</b>系列作品封面里的背景图设计：
+        色轴取自真实封面的调色板，构图与素材全部由程序重画，<b>不借用任何一张原图的像素</b>。
+        东方Project 为 ZUN（上海爱丽丝幻乐团）的同人系列作品，这里仅作风格层面的学习与致敬，与原作及其作者无任何授权或隶属关系。
       </p>
       <div class="statrow">
         <div><b>5</b><span>个系列</span></div>
@@ -39,6 +44,7 @@
         <div><b>1000–8000</b><span>像素边长</span></div>
         <div><b>0</b><span>次像素后期</span></div>
       </div>
+      <a class="skip" href="#works"><span class="skip__a">跳过说明</span><span class="skip__b">直接欣赏</span></a>
     </div>
   </section>
 
@@ -177,7 +183,7 @@
   <div class="foot__in">
     <div>
       <h5>关于这一组</h5>
-      <p>五个系列，均为无人物、无文字的纯背景，尺寸从 1000px 到 8000px 不等。</p>
+      <p>五个系列，均为无人物、无文字的纯背景，尺寸从 1000px 到 8000px 不等；「新排布六类」开头另附六张带标题的成品卡，用来说明同一排布的最终用途。</p>
       <p>同一套底座配方，靠素材配比、色轴与构图母题区分出不同气质。</p>
     </div>
     <div>
@@ -218,7 +224,8 @@
       ["系列", it.series],
       ["生成器", it.gen],
       ["尺寸", `${it.w} × ${it.h}`],
-      ["原始档", it.file]
+      ["原始档", it.file],
+      ["类型", it.kind || ""]
     ]
   };
 

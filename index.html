@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>笔触的来处 · AI 辅助绘画线上展厅</title>
-<meta name="description" content="三组 AI 辅助绘画作品：ComfyUI 提示词系列、程序化拼贴画、东方纯背景。记录生成方式与人类介入的程度。">
+<meta name="description" content="三组 AI 辅助绘画作品：ComfyUI 提示词系列、程序化拼贴画、东方风背景图。记录生成方式与人类介入的程度。">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
     <a href="index.html" class="is-active">首页</a>
     <a href="comfyui.html"><span class="idx">01</span>画风所寄</a>
     <a href="collage.html"><span class="idx">02</span>千禧迷思</a>
-    <a href="backgrounds.html"><span class="idx">03</span>东方纯背景</a>
+    <a href="backgrounds.html"><span class="idx">03</span>东方风背景图</a>
   </nav>
 </header>
 
@@ -156,7 +156,7 @@
         </div>
         <div class="prose">
           <p><strong>一个必须说清楚的区别。</strong>三个系列里，只有「画风所寄」是扩散模型生成的。
-            「千禧迷思」与「东方纯背景」不含任何扩散模型输出 —— 它们是 Pillow / NumPy 写成的渲染管线，
+            「千禧迷思」与「东方风背景图」不含任何扩散模型输出 —— 它们是 Pillow / NumPy 写成的渲染管线，
             素材来自照片库与原封面色板。把它们并置，是因为三者面对的是同一个问题：
             <strong>人的判断在哪里进场，机器的手在哪里接管。</strong></p>
         </div>
@@ -182,7 +182,7 @@
       <h5>索引</h5>
       <p><a href="comfyui.html">01 画风所寄</a></p>
       <p><a href="collage.html">02 千禧迷思</a></p>
-      <p><a href="backgrounds.html">03 东方纯背景</a></p>
+      <p><a href="backgrounds.html">03 东方风背景图</a></p>
     </div>
   </div>
 </footer>
@@ -206,7 +206,7 @@
     {
       href: "comfyui.html", no: "01", title: "画风所寄", count: C.items.length,
       latin: "My Favourite High Quality",
-      desc: "Qwen-Image 2.1 Turbo 单模型、纯提示词控制，复刻「日本动画 MV 截帧」的细线厚涂画法。33 轮迭代、84 张存档，全程不进后期。名字来自最后那条结论：画风寄在人物身上，不寄在风格词里。",
+      desc: "Qwen-Image 2.1 Turbo 单模型、纯提示词控制，探索本地 AI 模型能否复现 NovelAI 的激进生图风格。33 轮迭代、84 张存档，全程不进后期。名字来自最后那条结论：画风寄在人物身上，不寄在风格词里。",
       tags: ["扩散模型", "纯提示词", "无后期"],
       focus: "介入重心：提示词措辞与量化筛选",
       cover: pick(C.items, /v23_C2_garden|v28_017_shrine/)
@@ -220,7 +220,7 @@
       cover: K.items[0]
     },
     {
-      href: "backgrounds.html", no: "03", title: "东方纯背景", count: bgCount,
+      href: "backgrounds.html", no: "03", title: "东方风背景图", count: bgCount,
       latin: "Touhou Backgrounds",
       desc: "素材库照片 + 色轴映射 + 程序化光效，五个系列、无人无字的纯背景。色轴取自 54 张真实封面的调色板。",
       tags: ["程序化合成", "色轴映射", "1400–8000px"],
