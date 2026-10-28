@@ -530,8 +530,8 @@ body.theme-collage .wall { --min: 168px; }
 }
 .lb__stage.is-zoomed { cursor: grab; }
 .lb__stage.is-dragging { cursor: grabbing; }
+.lb__canvas { position: relative; max-width: 100%; line-height: 0; }
 .lb__stage img {
-  grid-area: 1 / 1;
   max-width: 100%; max-height: calc(100svh - 148px);
   object-fit: contain;
   box-shadow: 0 30px 80px rgba(0,0,0,.6);
@@ -542,13 +542,13 @@ body.theme-collage .wall { --min: 168px; }
 .lb__stage img.is-in { opacity: 1; }
 .lb__stage img.is-anim { transition: opacity .35s, transform .24s cubic-bezier(.2,.7,.2,1); }
 /* 切换时旧画面交给 ghost，与主图占同一个格子，尺寸规则完全一致才不会跳版 */
-/* 绝对定位到同一个网格单元：既不参与行高计算，也不会在收尾时把主图挤动 */
+/* 旧画面绝对定位在画布内，尺寸永远不超过主图，也不会参与布局把主图挤动 */
 .lb__stage img.lb__ghost {
   position: absolute; inset: 0; margin: auto;
-  max-width: 100%; max-height: 100%;
+  max-width: 100%; max-height: 100%; width: auto; height: auto;
   z-index: 1; pointer-events: none; opacity: 1;
 }
-.lb__img { z-index: 2; }
+.lb__img { position: relative; z-index: 2; }
 .lb__stage img.is-slide { transition: transform .5s cubic-bezier(.22,.68,.24,1); }
 @media (prefers-reduced-motion: reduce) {
   .lb__stage img.is-slide { transition-duration: .01s; }
