@@ -4,6 +4,7 @@ build/sources.local.json
 # 编辑器 / 助手残留
 .workbuddy-ai/
 .preview_check.png
+.preview/
 
 # Python
 __pycache__/

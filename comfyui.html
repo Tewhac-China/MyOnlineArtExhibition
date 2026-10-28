@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>画风所寄 · My Favourite High Quality</title>
-<meta name="description" content="Qwen-Image 2.1 Turbo 纯提示词系列：84 张、33 轮迭代、零像素后期。">
+<meta name="description" content="Qwen-Image 2.1 Turbo 纯提示词系列：99 张、34 轮迭代、零像素后期。">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="theme-comfy">
@@ -35,12 +35,12 @@
       <p class="lede">
         一个模型、一条固定的 sigma 曲线、一段手写提示词，2048×1408 出图后降采样，然后结束。
         没有第二个模型、没有 ControlNet、没有后期。这一组做的事，是探索本地 AI 模型能否复现 NovelAI 的激进生图风格 ——
-        33 轮迭代之后，这件事只在提示词里成立。
+        34 轮迭代之后，这件事只在提示词里成立。
         画里的人也换过一轮：先是黑裙金发的她，站在舞台与剧场里；后来是黄雨衣与透明伞的她，走到道口、灯塔、机甲与洪水里的鲸旁边。
       </p>
       <div class="statrow">
-        <div><b>84</b><span>张存档</span></div>
-        <div><b>33</b><span>轮迭代</span></div>
+        <div><b data-n="items">—</b><span>张存档</span></div>
+        <div><b data-n="rounds">—</b><span>轮迭代</span></div>
         <div><b>8 / 16</b><span>步采样</span></div>
         <div><b>0</b><span>次像素后期</span></div>
       </div>
@@ -126,7 +126,7 @@
           <div class="dim__name">概念与选题<small>CONCEPT</small></div>
           <div class="dim__body">
             <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>4 / 5</span></div>
-            <p class="dim__note">角色的六个识别点、二十来个场景（舞台、剧场、花园、屋顶、镜厅、图书馆、废墟…）、以及目标风格（NovelAI 的激进出图）全部由人指定。
+            <p class="dim__note">角色的六个识别点、三十多个场景（舞台、剧场、花园、屋顶、镜厅、图书馆、废墟…）、以及目标风格（NovelAI 的激进出图）全部由人指定。
               扣一分是因为画面里的具体内容仍由模型补完 —— 人能指定「有什么」，不能指定「长什么样」。</p>
           </div>
         </div>
@@ -177,8 +177,8 @@
       <div class="sec-head rise">
         <div class="sec-head__num">03 / WORKS</div>
         <div>
-          <h2>84 张，按主题归类</h2>
-          <p>同一套配方在二十来个场景里各跑一遍：舞台、剧场、麦田、屋顶、废墟、镜厅、列车、神社……
+          <h2><span data-n="items">—</span> 张，按主题归类</h2>
+          <p>同一套配方在三十多个场景里各跑一遍：舞台、剧场、麦田、屋顶、废墟、镜厅、列车、神社……
             可以切成「按主题」或「按版本谱系」两种看法。点开任意一张可看到种子、步数、p50 / edgeN 与完整原始提示词。</p>
         </div>
       </div>
@@ -197,8 +197,8 @@
   <div class="foot__in">
     <div>
       <h5>关于这一组</h5>
-      <p>84 张 PNG，文件名为原始输出名；每张内嵌完整 prompt 元数据，本站的提示词即由此读出。</p>
-      <p>同一配方在二十来个场景里各出一版，验证它在不同题材上是否成立。多数画里有人；v29 / v31 那几张无人称的空景是故意留下的对照组 —— 它们正是「画风由人物承载」这条结论的反证。</p>
+      <p>99 张 PNG，文件名为原始输出名；每张内嵌完整 prompt 元数据，本站的提示词即由此读出。</p>
+      <p>同一配方在三十多个场景里各出一版，验证它在不同题材上是否成立。多数画里有人；v29 / v31 那几张无人称的空景是故意留下的对照组 —— 它们正是「画风由人物承载」这条结论的反证。</p>
     </div>
     <div>
       <h5>本页字体</h5>
@@ -237,6 +237,13 @@
     ],
     prompt: it => it.prompt || null
   };
+
+  // 张数与轮次跟着数据走，源目录增删后不用改页面
+  const rounds = Math.max(...D.groups.map(g => Number((g.name.match(/v(\d+)/) || [0, 0])[1])));
+  const nums = { items: D.items.length, rounds };
+  document.querySelectorAll("[data-n]").forEach(el => {
+    el.textContent = nums[el.dataset.n] ?? "—";
+  });
 
   // 主视觉：巨鲸那张
   const hero = all.find(i => /whale/i.test(i.file))
