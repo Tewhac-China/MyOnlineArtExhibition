@@ -44,7 +44,7 @@
     root: null, stage: null, img: null, info: null,
     items: [], idx: 0, cfg: null,
     s: 1, tx: 0, ty: 0, MAX: 16,
-    slide: 0, sliding: false, _slideTimer: null, ghost: null,
+    slide: 0, sliding: false, slideBusy: false, _slideTimer: null, ghost: null, _pendingFull: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
     base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _shown: false,
 
@@ -109,7 +109,11 @@
         else if (e.key === "-") this.zoomBy(1 / 1.4);
         else if (e.key === "0") this.reset();
       });
-      window.addEventListener("resize", () => { if (root.classList.contains("is-open")) this.reset(); });
+      window.addEventListener("resize", () => {
+        if (!root.classList.contains("is-open")) return;
+        this.refreshRect();
+        this.reset();
+      });
     },
 
     /* ---------------- 指针：拖动 + 双指捏合 ---------------- */
@@ -154,12 +158,15 @@
           this.tx = this.dragBase.tx + dx;
           this.ty = this.dragBase.ty + dy;
           this.apply(false);
-        } else if (this.dragBase && !this.slide && this.items.length > 1) {
+        } else if (this.dragBase && this.items.length > 1) {
           // 未放大：横向拖动直接带画面，跟手；纵向或斜向不抢
           const dx = e.clientX - this.dragBase.x;
           const dy = e.clientY - this.dragBase.y;
-          if (!this.sliding && (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.3)) return;
-          this.sliding = true;
+          if (!this.sliding) {
+            // 起手判定：横向位移要明显大于纵向，且超过 8px 才进入滑动
+            if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+            this.sliding = true;
+          }
           this.moved = Math.max(this.moved, Math.abs(dx));
           const W = (st.clientWidth || window.innerWidth) * 0.92;
           this.img.classList.remove("is-slide");
@@ -254,9 +261,8 @@
     zoomTo(target, cx, cy, anim) {
       this.measure();
       const s2 = clamp(target, 1, this.MAX);
-      const r = this.stage.getBoundingClientRect();
-      const ox = cx == null ? 0 : cx - (r.left + r.width / 2);
-      const oy = cy == null ? 0 : cy - (r.top + r.height / 2);
+      const ox = cx == null ? 0 : cx - (this._rl + this._rw / 2);
+      const oy = cy == null ? 0 : cy - (this._rt + this._rh / 2);
       const k = s2 / this.s;
       this.tx = ox - (ox - this.tx) * k;
       this.ty = oy - (oy - this.ty) * k;
@@ -266,8 +272,7 @@
     },
 
     zoomBy(f) {
-      const r = this.stage.getBoundingClientRect();
-      this.zoomTo(this.s * f, r.left + r.width / 2, r.top + r.height / 2, true);
+      this.zoomTo(this.s * f, this._rl + this._rw / 2, this._rt + this._rh / 2, true);
     },
 
     reset() {
@@ -279,15 +284,25 @@
       this.measure();
       const it = this.items[this.idx] || {};
       const nat = it.fw || it.w || this.img.naturalWidth || this.base.w;
-      const r = this.stage.getBoundingClientRect();
       this.s = 1; this.tx = 0; this.ty = 0;
-      this.zoomTo(clamp(nat / this.base.w, 1, this.MAX), r.left + r.width / 2, r.top + r.height / 2, true);
+      this.zoomTo(clamp(nat / this.base.w, 1, this.MAX),
+                 this._rl + this._rw / 2, this._rt + this._rh / 2, true);
+    },
+
+    /** 舞台尺寸只在打开 / 尺寸变化 / 图片切换后量一次，拖动时不再读布局 */
+    refreshRect() {
+      const r = this.stage.getBoundingClientRect();
+      this._rw = r.width;
+      this._rh = r.height;
+      this._rl = r.left;
+      this._rt = r.top;
     },
 
     clampPan() {
-      const r = this.stage.getBoundingClientRect();
-      const mx = Math.max(0, (this.base.w * this.s - r.width) / 2) + 24;
-      const my = Math.max(0, (this.base.h * this.s - r.height) / 2) + 24;
+      const rw = this._rw || this.stage.clientWidth;
+      const rh = this._rh || this.stage.clientHeight;
+      const mx = Math.max(0, (this.base.w * this.s - rw) / 2) + 24;
+      const my = Math.max(0, (this.base.h * this.s - rh) / 2) + 24;
       this.tx = clamp(this.tx, -mx, mx);
       this.ty = clamp(this.ty, -my, my);
     },
@@ -299,8 +314,12 @@
       im.classList.toggle("is-anim", !!anim && !this.slide);
       im.style.transform = `translate3d(${this.tx + this.slide}px, ${this.ty}px, 0) scale(${this.s})`;
       this.stage.classList.toggle("is-zoomed", this.s > 1.001);
-      const pct = $(".pct", this.root);
-      if (pct) pct.textContent = Math.round(this.s * 100) + "%";
+      const p = Math.round(this.s * 100);
+      if (p !== this._pct) {
+        this._pct = p;
+        const pct = $(".pct", this.root);
+        if (pct) pct.textContent = p + "%";
+      }
       if (anim) {
         clearTimeout(this._t);
         this._t = setTimeout(() => im.classList.remove("is-anim"), 240);
@@ -321,6 +340,7 @@
       this.groups = groups || [];
       this.root.classList.add("is-open");
       document.documentElement.style.overflow = "hidden";
+      this.refreshRect();
       this.show(i);
     },
     close() {
@@ -328,6 +348,8 @@
       document.documentElement.style.overflow = "";
       clearTimeout(this._slideTimer);
       this.sliding = false;
+      this.slideBusy = false;
+      this._pendingFull = null;
       this.slide = 0;
       this.ghost.hidden = true;
       this.ghost.removeAttribute("src");
@@ -364,19 +386,18 @@
       const next = new Image();
       next.onload = () => {
         if (token !== this._token) return;
-        // 原图若先到（缓存命中时很常见），直接上原图，避免先铺一张大图再被替换
-        const src = this._fullReady && this._fullSrc ? this._fullSrc : next.src;
-        this._shown = true;
-        if (hadPrev) this.slideTo(src, dir, dx, prevSrc);
-        else {
-          this.img.src = src;
-          this.img.classList.remove("is-in");
-          void this.img.offsetWidth;          // 强制重算，否则淡入会被合并掉
-          this.img.classList.add("is-in");
-          this.slide = 0;
-          this.measure();
-          this.apply(false);
-        }
+        let painted = false;
+        const paint = () => {
+          if (painted || token !== this._token) return;
+          painted = true;
+          this.paintNext(it, next, hadPrev, prevSrc, dir, dx);
+        };
+        // 解码完成再动画面，避免新 img 先顶着旧位图滑进来再被顶掉；
+        // decode 在某些情况下不 settle，所以加一个短兜底，绝不卡住
+        if (typeof next.decode === "function") {
+          next.decode().then(paint, paint);
+          setTimeout(paint, 120);
+        } else paint();
       };
       next.onerror = () => { /* 载入失败保持当前画面，不白屏 */ };
       next.src = largeSrc;
@@ -392,6 +413,7 @@
           this.setRes(`原图 · ${big.naturalWidth} × ${big.naturalHeight}`, "ready");
           // 画面已经铺开就地替换；还没铺开就等 next.onload 直接用原图
           if (!this._shown) return;
+          if (this.slideBusy) { this._pendingFull = big.src; return; }
           this.img.src = big.src;
           requestAnimationFrame(() => { this.measure(); this.apply(false); });
         };
@@ -420,6 +442,24 @@
       this.info.scrollTop = 0;
     },
 
+    /** 位图就绪后真正上屏：原图若先到就直接上原图，否则先上快图再替换 */
+    paintNext(it, next, hadPrev, prevSrc, dir, dx) {
+      const src = this._fullReady && this._fullSrc ? this._fullSrc : next.src;
+      this._shown = true;
+      if (hadPrev) {
+        this.slideTo(src, dir, dx, prevSrc);
+      } else {
+        this.img.src = src;
+        this.img.classList.remove("is-in");
+        void this.img.offsetWidth;            // 强制重算，否则淡入会被合并掉
+        this.img.classList.add("is-in");
+        this.slide = 0;
+        this.measure();
+        this.refreshRect();
+        this.apply(false);
+      }
+    },
+
     /** 滑动交接：旧画面交给 ghost 继续往手势方向滑出，新画面从另一侧滑入。
         dir=+1 看下一张（新图自右来），dir=-1 看上一张；dx 是手指已经拖出的位移。 */
     slideTo(newSrc, dir, dx, prevSrc) {
@@ -428,6 +468,8 @@
       const g = this.ghost;
 
       clearTimeout(this._slideTimer);
+      this.slideBusy = true;
+      this._pendingFull = null;
       g.classList.remove("is-slide");
       g.src = prevSrc;
       g.hidden = false;
@@ -455,8 +497,16 @@
         g.removeAttribute("src");
         g.classList.remove("is-slide");
         this.img.classList.remove("is-slide");
+        this.slideBusy = false;
         this.measure();
-      }, 620);
+        this.refreshRect();
+        if (this._pendingFull) {           // 滑完再把原图补上
+          const src = this._pendingFull;
+          this._pendingFull = null;
+          this.img.src = src;
+          requestAnimationFrame(() => { this.measure(); this.apply(false); });
+        }
+      }, 520);
     },
 
     /** 未放大时的回弹 / 收尾：把 slide 归零 */
@@ -466,8 +516,18 @@
       this.img.classList.add("is-slide");
       this.slide = 0;
       this.apply(false);
+      this.slideBusy = true;
       clearTimeout(this._slideTimer);
-      this._slideTimer = setTimeout(() => this.img.classList.remove("is-slide"), 520);
+      this._slideTimer = setTimeout(() => {
+        this.img.classList.remove("is-slide");
+        this.slideBusy = false;
+        if (this._pendingFull) {
+          const src = this._pendingFull;
+          this._pendingFull = null;
+          this.img.src = src;
+          requestAnimationFrame(() => { this.measure(); this.apply(false); });
+        }
+      }, 480);
     }
   };
 
