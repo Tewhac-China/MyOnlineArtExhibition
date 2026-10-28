@@ -398,6 +398,7 @@
       const hadPrev = !!prevSrc && this.img.classList.contains("is-in");
 
       const token = ++this._token;
+      const rapid = this.isRapid();
       const largeSrc = it.large || it.thumb;
       const fullSrc = it.full && it.full !== it.large ? it.full : null;
       this._fullSrc = fullSrc;
@@ -408,7 +409,8 @@
       const hit = this._cache.get(largeSrc);
       if (hit && hit.ready) {
         // 已预取并解码：直接同步上屏，点击即切换
-        this.paintNext(it, { src: largeSrc }, hadPrev, prevSrc, dir, dx);
+        if (rapid) this.cutTo(largeSrc);
+        else this.paintNext(it, { src: largeSrc }, hadPrev, prevSrc, dir, dx);
         this.preloadNeighbors(i);
       } else {
       const next = new Image();
@@ -418,7 +420,8 @@
         const paint = () => {
           if (painted || token !== this._token) return;
           painted = true;
-          this.paintNext(it, next, hadPrev, prevSrc, dir, dx);
+          if (rapid) this.cutTo(next.src);
+          else this.paintNext(it, next, hadPrev, prevSrc, dir, dx);
         };
         // 解码完成再动画面，避免新 img 先顶着旧位图滑进来再被顶掉；
         // decode 在某些情况下不 settle，所以加一个短兜底，绝不卡住
@@ -477,6 +480,33 @@
       if (!pre) return;
       const clamped = pre.classList.toggle("is-clamped");
       btn.textContent = clamped ? "展开" : "收起";
+    },
+
+    /** 是否处于连击（两次切图间隔很短）：连击时改用就地换图，不重放滑动 */
+    isRapid() {
+      const now = performance.now();
+      const gap = now - (this._lastNav || 0);
+      this._lastNav = now;
+      return gap < 380;
+    },
+
+    /** 上一次滑动还没结束时的连击：不重放整段滑出动画，就地换图（否则每点一次都把画面甩出屏幕，看起来像卡住） */
+    cutTo(src) {
+      clearTimeout(this._slideTimer);
+      this.slideBusy = false;
+      this._pendingFull = null;
+      const g = this.ghost;
+      g.hidden = true;
+      g.removeAttribute("src");
+      g.classList.remove("is-slide");
+      this.img.classList.remove("is-slide", "is-anim");
+      this.slide = 0;
+      this.img.src = src;
+      this._shown = true;
+      this.img.classList.add("is-in");
+      this.measure();
+      this.refreshRect();
+      this.apply(false);
     },
 
     /** 预取并预解码：左右切换要用的下一张，提前放进内存，点击时零等待 */
