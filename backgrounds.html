@@ -273,6 +273,7 @@
       const has = g === "*" || sec.id === "s-" + g;
       sec.style.display = has ? "" : "none";
     });
+    Site.jumpToFirstVisible(wrap);
   }));
 
   Site.reveals();

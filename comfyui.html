@@ -275,7 +275,7 @@
       sec.innerHTML = `
         <header class="grp__head">
           <span class="grp__name">${esc(g.name)}</span>
-          <span class="grp__count">${g.items.length}</span>
+          <span class="grp__count">${g.items.length} 张</span>
           <span class="grp__meta">${esc(meta)}</span>
         </header>
         <div class="wall" style="--ar:1.4545"></div>`;
@@ -297,6 +297,7 @@
       $$(".grp", groupsEl).forEach(s => {
         s.style.display = (k === "*" || s.dataset.key === k) ? "" : "none";
       });
+      Site.jumpToFirstVisible(groupsEl);
     }));
   }
 
