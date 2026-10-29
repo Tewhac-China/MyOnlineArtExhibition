@@ -286,6 +286,8 @@ VERSION_META = {
                   "画风回来了。anime 画风由人物承载，不由风格词承载 —— 这是整条谱系最贵的一条。"),
     "v34 百景": ("第 34 轮", "二十个互不相同的世界，人物各不相同", "扩展",
                "同一套配方在四个轴（题材 / 时间 / 色调 / 机位）上同时拉开，验证画风能否脱离固定角色。"),
+    "v35 三十景": ("第 35 轮", "三十个没碰过的题材", "扩展",
+                "沿用 v34 三条定稿规则（人物占画幅 ≥ 1/4、写明动漫五官、脸不被遮住），题材转向江户 / 昭和 / 近未来 / 工业 / 极地。"),
 }
 VERSION_ORDER = list(VERSION_META.keys())
 # 同一輪的散落標籤併入同一組
@@ -351,6 +353,14 @@ THEMES = {
     "overpass": ("天桥", "雨里的钢梁与车灯"),
     "sakura": ("樱花", "河堤两岸的花枝隧道"),
     "star": ("星空", "云海之上的银河与望远镜"),
+    "edo": ("江户", "雨夜的町屋与雪里的花街"),
+    "showa": ("昭和室内", "咖啡馆、理发店、洗衣房的老灯与镜子"),
+    "cinema": ("放映室", "光束穿过灰尘打到幕布上"),
+    "saltflat": ("盐湖", "天与地互相照镜子的那种平"),
+    "balloon": ("热气球", "清晨的球囊与吊篮"),
+    "cablecar": ("缆车", "雾里的钢索与车厢"),
+    "mushroom": ("蘑菇林", "巨型菌盖下的光斑"),
+    "port": ("港口", "集装箱、吊机与夜里的钠灯"),
     "other": ("其他", "未标注场景的试验稿"),
 }
 
@@ -367,6 +377,17 @@ SCENE_THEME = {
     "greenhouse": "greenhouse", "festival": "festival",
     "workshop": "workshop", "overpass": "overpass",
     "sakura": "sakura", "stargazer": "star",
+    # v35 三十景
+    "edo": "edo", "hanamachi": "edo",
+    "kissaten": "showa", "barber": "showa", "laundry": "showa",
+    "chapel": "ruins", "junkyard": "ruins", "ferris": "ruins",
+    "observatory": "star", "rarebooks": "library", "elevator": "library",
+    "projection": "cinema", "saltflat": "saltflat", "busstop": "rain",
+    "balloon": "balloon", "cablecar": "cablecar", "mushroom": "mushroom",
+    "port": "port", "polar": "ice", "subway": "train", "station": "star",
+    "ricefield": "field", "paddymirror": "field", "rainhouse": "greenhouse",
+    "onsen": "rain", "rooftoppool": "rooftop", "cabin": "bedroom",
+    "lava": "ice", "yakitori": "ramen", "icecave": "ice",
 }
 
 # v34 的场景码 → 中文短名（取自 风格复刻/scripts/run_v34.py 的 JOBS 表）
@@ -379,6 +400,17 @@ SCENE_CN = {
     "snowkonbini": "雪夜的便利店", "gasstation": "沙漠公路的加油站",
     "sakura": "樱花隧道里的自行车", "ruinpiano": "废墟里的钢琴师", "stargazer": "星空下的观测者",
     "figure": "道口远影",
+    # v35 三十景
+    "edo": "江户雨夜的町屋", "kissaten": "昭和咖啡馆的午后", "station": "空间站观景舱",
+    "balloon": "清晨的热气球", "chapel": "教堂废墟里的光", "subway": "淹水的地铁站",
+    "ricefield": "稻田上的雷雨", "barber": "老理发店的镜子", "icecave": "蓝冰洞里的探险者",
+    "yakitori": "夜市烧烤摊", "laundry": "深夜洗衣房", "cablecar": "雾中的缆车",
+    "junkyard": "废车场里的野花", "observatory": "天文台圆顶内", "rainhouse": "暴雨中的玻璃花房",
+    "projection": "放映室的光束", "onsen": "雪夜的露天温泉", "rooftoppool": "天台泳池的午后",
+    "ferris": "废弃游乐园的摩天轮", "rarebooks": "特藏室的善本", "saltflat": "盐湖上的镜面",
+    "cabin": "深林小屋的窗", "busstop": "雨中的公交站", "lava": "熔岩原上的观测站",
+    "hanamachi": "花街的雪", "mushroom": "巨型蘑菇森林", "port": "港口的集装箱夜",
+    "elevator": "图书馆的铁栅电梯", "polar": "极地科考站", "paddymirror": "银河下的水田",
 }
 
 # 无场景码时按提示词关键词兜底（顺序即优先级：越靠前越是"画面主体"）
