@@ -74,7 +74,7 @@ COMFY_T = r"""
     ok('原图标签就绪', /原图 · \d+ × \d+/.test(document.querySelector('.lb__res').textContent),
        document.querySelector('.lb__res').textContent);
     var im=document.querySelector('.lb__img');
-    ok('显示的是原图分辨率', im.naturalWidth===2048, im.naturalWidth);
+    ok('显示的是原图分辨率', im.naturalWidth===L.items[L.idx].fw, im.naturalWidth+' vs '+L.items[L.idx].fw);
     // 信息面板
     document.querySelector('.lb__info-btn').click(); await wait(300);
     ok('信息面板可收起', getComputedStyle(document.querySelector('.lb__info')).display==='none');
