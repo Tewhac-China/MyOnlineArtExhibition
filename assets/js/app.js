@@ -90,7 +90,6 @@
             <button data-act="dl" aria-label="下载原图" title="下载原图（D）">↓</button>
             <button data-act="fs" aria-label="全屏查看" title="全屏（F）">⛶</button>
           </div>
-          <div class="lb__hint">滚轮缩放 · 拖动平移 · 双击原图 100% · D 下载 · F 全屏</div>
         </div>
         <aside class="lb__info"></aside>`;
       document.body.appendChild(root);

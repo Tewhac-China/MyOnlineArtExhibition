@@ -288,6 +288,8 @@ VERSION_META = {
                "同一套配方在四个轴（题材 / 时间 / 色调 / 机位）上同时拉开，验证画风能否脱离固定角色。"),
     "v35 三十景": ("第 35 轮", "三十个没碰过的题材", "扩展",
                 "沿用 v34 三条定稿规则（人物占画幅 ≥ 1/4、写明动漫五官、脸不被遮住），题材转向江户 / 昭和 / 近未来 / 工业 / 极地。"),
+    "v36 幻想三十": ("第 36 轮", "三十个现实里不存在的题材", "转向",
+                 "这一轮放开「必须露脸」：可以有动物、有遮脸的角色、也可以纯景。风格头换成 gouache + storybook，并显式写「这是画」。"),
 }
 VERSION_ORDER = list(VERSION_META.keys())
 # 同一輪的散落標籤併入同一組
@@ -361,6 +363,10 @@ THEMES = {
     "cablecar": ("缆车", "雾里的钢索与车厢"),
     "mushroom": ("蘑菇林", "巨型菌盖下的光斑"),
     "port": ("港口", "集装箱、吊机与夜里的钠灯"),
+    "myth": ("幻想巨物", "鹿神、巨龟、凤凰、龙骨与雾中巨像"),
+    "skyrealm": ("天空奇筑", "浮空岛、天空之城、沙漏城市与巫师塔"),
+    "costumed": ("奇装人物", "全盔骑士、狐面巫女、黄铜潜水盔、白兔绅士、蝶翼少女"),
+    "forest": ("秘境森林", "发光水母、菌丝、镜中森林与树洞"),
     "other": ("其他", "未标注场景的试验稿"),
 }
 
@@ -388,6 +394,18 @@ SCENE_THEME = {
     "ricefield": "field", "paddymirror": "field", "rainhouse": "greenhouse",
     "onsen": "rain", "rooftoppool": "rooftop", "cabin": "bedroom",
     "lava": "ice", "yakitori": "ramen", "icecave": "ice",
+    # v36 幻想三十：按这一批自己的三类分（纯景 / 生物 / 遮脸人物），不逐张开新类
+    "islands": "skyrealm", "skycity": "skyrealm", "hourglass": "skyrealm",
+    "teapot": "skyrealm", "papercranes": "skyrealm", "owltower": "skyrealm",
+    "deergod": "myth", "turtle": "myth", "phoenix": "myth",
+    "dragonbones": "myth", "statue": "myth",
+    "knight": "costumed", "foxmask": "costumed", "diverhelmet": "costumed",
+    "alien": "costumed", "rabbit": "costumed", "butterfly": "costumed",
+    "jellyfish": "forest", "mycelium": "forest", "mirrorforest": "forest",
+    "treehouse": "forest",
+    "whalesky": "whale", "skywhale": "whale", "glasswhale": "whale",
+    "cloudlibrary": "library", "catlibrary": "library",
+    "crystal": "desert", "stardust": "star", "aurorabones": "ice",
 }
 
 # v34 的场景码 → 中文短名（取自 风格复刻/scripts/run_v34.py 的 JOBS 表）
@@ -411,6 +429,17 @@ SCENE_CN = {
     "cabin": "深林小屋的窗", "busstop": "雨中的公交站", "lava": "熔岩原上的观测站",
     "hanamachi": "花街的雪", "mushroom": "巨型蘑菇森林", "port": "港口的集装箱夜",
     "elevator": "图书馆的铁栅电梯", "polar": "极地科考站", "paddymirror": "银河下的水田",
+    # v36 幻想三十
+    "islands": "浮空岛与瀑布", "whalesky": "鲸群飞过巨月", "deergod": "发光鹿神",
+    "crystal": "沙漠里的水晶巨树", "cloudlibrary": "云海上的图书馆塔", "jellyfish": "发光水母森林",
+    "owltower": "猫头鹰巫师塔", "turtle": "驮城的巨龟", "stardust": "星尘瀑布",
+    "skywhale": "机械鲸与飞艇港", "glasswhale": "花海里的玻璃鲸", "phoenix": "火山口的凤凰",
+    "dragonbones": "冰封的巨龙骸骨", "mycelium": "菌丝森林", "skycity": "天空之城的阶梯",
+    "hourglass": "沙漏里的城市", "knight": "全盔骑士的荒原", "foxmask": "狐面巫女",
+    "diverhelmet": "黄铜潜水盔的探险家", "alien": "异星沙漠的宇航员", "rabbit": "白兔绅士的茶会",
+    "catlibrary": "猫的图书馆", "butterfly": "蝶翼少女", "papercranes": "纸鹤飞过城市",
+    "aurorabones": "极光下的巨鲸骨", "mirrorforest": "镜中森林", "treehouse": "树洞里的房间",
+    "teapot": "悬浮的茶壶群岛", "boat": "银河中的小船", "statue": "雾中的巨神像",
 }
 
 # 无场景码时按提示词关键词兜底（顺序即优先级：越靠前越是"画面主体"）
@@ -454,9 +483,14 @@ def _cn_num(n):
     return CN_NUM[n] if n <= 10 else str(n)
 
 
+def scene_key(scene):
+    """场景码归一化：去掉 _W2 / _v2 这类机位后缀，'statue_W2' → 'statue'。"""
+    return re.sub(r"_w\d+$", "", (scene or "").strip().lower())
+
+
 def make_title(scene, stem, theme_name):
     """中文场景名 > 场景码 + 主题 > 只有单词场景就只用主题 > 文件名前缀。"""
-    key = (scene or "").strip().lower()
+    key = scene_key(scene)
     if key in SCENE_CN:
         return SCENE_CN[key]
     if scene and scene != "—":
@@ -473,7 +507,7 @@ def classify_theme(scene, prompt):
     """先看场景码；没有码时，先拿提示词开头那句「机位 + 前景近物」判断，
     判不出来再全文兜底 —— 全文里的比喻（mirror sharp / mirrors the lamps）会骗人。"""
     if scene and scene != "—":
-        tail = scene.split("_")[-1].lower()
+        tail = scene_key(scene)
         if tail in SCENE_THEME:
             return SCENE_THEME[tail]
         if tail in THEMES:
