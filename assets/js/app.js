@@ -86,8 +86,11 @@
             <span class="lb__sep"></span>
             <button data-act="fit" aria-label="适应窗口" title="适应窗口">⤢</button>
             <button data-act="one" aria-label="原始大小" title="1:1 原始像素">1:1</button>
+            <span class="lb__sep"></span>
+            <button data-act="dl" aria-label="下载原图" title="下载原图（D）">↓</button>
+            <button data-act="fs" aria-label="全屏查看" title="全屏（F）">⛶</button>
           </div>
-          <div class="lb__hint">滚轮 / 双指缩放 · 拖动平移 · 双击切到原图 100%</div>
+          <div class="lb__hint">滚轮缩放 · 拖动平移 · 双击原图 100% · D 下载 · F 全屏</div>
         </div>
         <aside class="lb__info"></aside>`;
       document.body.appendChild(root);
@@ -115,8 +118,19 @@
           else if (a === "out") this.zoomBy(1 / 1.4);
           else if (a === "reset" || a === "fit") this.reset();
           else if (a === "one") this.actualSize();
+          else if (a === "dl") this.download(b);
+          else if (a === "fs") this.toggleFullscreen();
         });
       });
+
+      const onFsChange = () => {
+        if (!root.classList.contains("is-open")) return;
+        this.refreshRect();
+        this.clampPan();
+        this.apply(false);
+      };
+      document.addEventListener("fullscreenchange", onFsChange);
+      document.addEventListener("webkitfullscreenchange", onFsChange);
 
       this.bindPointer();
       this.bindWheel();
@@ -129,6 +143,12 @@
         else if (e.key === "+" || e.key === "=") this.zoomBy(1.4);
         else if (e.key === "-") this.zoomBy(1 / 1.4);
         else if (e.key === "0") this.reset();
+        else if (e.key === "d" || e.key === "D") {
+          const b = $('[data-act="dl"]', root);
+          this.download(b);
+        }
+        else if (e.key === "f" || e.key === "F") this.toggleFullscreen();
+        else if (e.key === "i" || e.key === "I") root.classList.toggle("info-off");
       });
       window.addEventListener("resize", () => {
         if (!root.classList.contains("is-open")) return;
@@ -331,6 +351,44 @@
       const my = Math.max(0, (this.base.h * this.s - rh) / 2) + 24;
       this.tx = clamp(this.tx, -mx, mx);
       this.ty = clamp(this.ty, -my, my);
+    },
+
+    /** 下载当前这张的原图（有 full 就是原始分辨率） */
+    download(btn) {
+      const it = this.items[this.idx] || {};
+      const src = it.full || it.large || it.thumb;
+      if (!src) return;
+      // 文件名沿用原始输出名，只是换成实际发布的 webp 后缀，方便和源目录对照
+      const name = String(it.file || "image").replace(/\.[^.]+$/, "") + ".webp";
+      const a = document.createElement("a");
+      a.href = src;
+      a.download = name;
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 0);
+      if (btn) {
+        const t = btn.textContent;
+        btn.classList.add("is-done");
+        btn.textContent = "✓";
+        setTimeout(() => { btn.classList.remove("is-done"); btn.textContent = t; }, 1100);
+      }
+    },
+
+    /** 全屏：把灯箱本体推进全屏，省掉浏览器边框，图能多占一截 */
+    toggleFullscreen() {
+      const d = document;
+      const fs = d.fullscreenElement || d.webkitFullscreenElement;
+      if (fs) {
+        const exit = d.exitFullscreen || d.webkitExitFullscreen;
+        if (exit) exit.call(d);
+        return;
+      }
+      const req = this.root.requestFullscreen || this.root.webkitRequestFullscreen;
+      if (!req) return;                       // iOS Safari 不支持元素全屏，静默跳过
+      const r = req.call(this.root);
+      if (r && r.catch) r.catch(() => {});
     },
 
     /** 百分比只写 DOM，不动画面 —— 首帧布局还没稳定时用它补一次 */

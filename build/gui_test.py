@@ -37,6 +37,9 @@ COMFY_T = r"""
   try{
     await wait(900);
     var L=Site.LB, secs=document.querySelectorAll('.grp'), chips=document.querySelectorAll('#filters button');
+    var sk=document.querySelector('.skip');
+    ok('有「直接欣赏」按钮', !!sk);
+    ok('「直接欣赏」是实心按钮', !!sk && getComputedStyle(sk).backgroundColor !== 'rgba(0, 0, 0, 0)', sk && getComputedStyle(sk).backgroundColor);
     ok('主题分组数>0', secs.length>0, secs.length);
     ok('筛选按钮=分组+1', chips.length===secs.length+1, chips.length+'/'+secs.length);
     // 筛选
@@ -70,6 +73,16 @@ COMFY_T = r"""
     ok('1:1 = 原生 100%', pct()===100, pct());
     document.querySelector('.lb__tools [data-act="fit"]').click(); await wait(400);
     ok('适应窗口回到初始比例', pct()===fitPct, pct()+' vs '+fitPct);
+    // 下载 / 全屏
+    var dl=document.querySelector('[data-act="dl"]');
+    ok('有下载按钮', !!dl);
+    var rec=null, oc=HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click=function(){ rec={href:this.getAttribute('href'), name:this.getAttribute('download')}; };
+    dl.click(); HTMLAnchorElement.prototype.click=oc;
+    ok('下载指向原图', !!rec && rec.href===L.items[L.idx].full, rec && rec.href);
+    ok('下载文件名沿用原始名', !!rec && /\.webp$/.test(rec.name) && rec.name.indexOf(L.items[L.idx].file.replace(/\.png$/,''))===0, rec && rec.name);
+    ok('有全屏按钮', !!document.querySelector('[data-act="fs"]'));
+
     // 原图
     ok('原图标签就绪', /原图 · \d+ × \d+/.test(document.querySelector('.lb__res').textContent),
        document.querySelector('.lb__res').textContent);
