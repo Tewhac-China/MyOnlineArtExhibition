@@ -119,6 +119,10 @@ COLLAGE_T = r"""
     ok('序列=6', L.items.length===6, L.items.length);
     ok('原图 5312 宽', document.querySelector('.lb__img').naturalWidth===5312, document.querySelector('.lb__img').naturalWidth);
     ok('原图标签', /5312 × 8704/.test(document.querySelector('.lb__res').textContent), document.querySelector('.lb__res').textContent);
+    var note=document.querySelector('#note');
+    ok('有「关于节点」一节', !!note && /关于节点/.test(note.textContent));
+    ok('感悟分段齐全', !!note && note.querySelectorAll('.note p').length>=7, note && note.querySelectorAll('.note p').length);
+    ok('收尾段有强调线', !!note && !!note.querySelector('.note .close'));
     ok('文案字段齐全', /這一天算什麼/.test(document.querySelector('.lb__info').textContent), '');
     document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await wait(300);
     ok('无横向溢出(1440)', document.documentElement.scrollWidth<=document.documentElement.clientWidth+1,
