@@ -14,6 +14,7 @@ assets/css/style.css  样式（含字体约定与竖屏适配）
 assets/js/app.js      共用交互（顶栏 / 进场 / 展墙 / 筛选 / 图片查看器）
 assets/data/*.js      window.__DATA_* 数据（由 build_site.py 产生，勿手改）
 assets/img/<coll>/    t_NNN.webp 缩略图（640）· l_NNN.webp 快图（1600，8K 源 2200）· f_NNN.webp 原图（原始分辨率）
+assets/favicon.svg    站点图标（一笔金色笔触）；另有 32px PNG 与 180px apple-touch-icon
 assets/fonts/         标题字体子集（仅在系统未安装该字体时才会下载）
 build/build_site.py   扫描来源目录 → 生成图片与数据
 build/subset_fonts.py 把标题字体裁成本站用到的字
