@@ -86,6 +86,17 @@ COMFY_T = r"""
     ok('下载文件名沿用原始名', !!rec && /\.webp$/.test(rec.name) && rec.name.indexOf(L.items[L.idx].file.replace(/\.png$/,''))===0, rec && rec.name);
     ok('有全屏按钮', !!document.querySelector('[data-act="fs"]'));
 
+    // 载入提示
+    var ld=document.querySelector('.lb__load'), spin=document.querySelector('.lb__spin');
+    ok('有载入提示层', !!ld && !!spin);
+    ok('载入提示默认不挡画面', !!ld && !ld.classList.contains('is-on') && getComputedStyle(ld).visibility==='hidden');
+    ok('转圈动画已注册', !!spin && getComputedStyle(spin).animationName==='lbSpin', spin && getComputedStyle(spin).animationName);
+    L.showLoad(0); await wait(80);
+    ok('载入提示能浮出', !!ld && ld.classList.contains('is-on'), ld && ld.className);
+    L.hideLoad(); await wait(80);
+    ok('载入提示能收起', !!ld && !ld.classList.contains('is-on'), ld && ld.className);
+    ok('占位模糊已退掉', !document.querySelector('.lb__img').classList.contains('is-ph'));
+
     // 原图
     ok('原图标签就绪', /原图 · \d+ × \d+/.test(document.querySelector('.lb__res').textContent),
        document.querySelector('.lb__res').textContent);
@@ -98,6 +109,30 @@ COMFY_T = r"""
     // ESC
     document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await wait(400);
     ok('ESC 关闭', !L.root.classList.contains('is-open'));
+
+    // 慢网：把 Image 的 src 延迟 700ms，验证「载入提示 + 低清占位」这条路径
+    var RealImage=window.Image;
+    window.Image=function(){
+      var im=new RealImage();
+      var desc=Object.getOwnPropertyDescriptor(HTMLImageElement.prototype,'src');
+      Object.defineProperty(im,'src',{ configurable:true,
+        set:function(v){ setTimeout(function(){ desc.set.call(im,v); }, 700); },
+        get:function(){ return desc.get.call(im); } });
+      return im;
+    };
+    document.querySelectorAll('.shot')[20].click(); await wait(180);
+    var ld2=document.querySelector('.lb__load'), im3=document.querySelector('.lb__img');
+    ok('慢网下浮出载入提示', !!ld2 && ld2.classList.contains('is-on'), ld2 && ld2.className);
+    ok('载入提示可见', !!ld2 && getComputedStyle(ld2).visibility==='visible', ld2 && getComputedStyle(ld2).visibility);
+    ok('首次打开先铺低清占位', im3.classList.contains('is-ph'), im3.className);
+    var phPct=parseInt(document.querySelector('.pct').textContent);
+    await wait(2000);
+    ok('加载完成后提示收起', !ld2.classList.contains('is-on'), ld2.className);
+    ok('清晰图到位后模糊退掉', !im3.classList.contains('is-ph') && im3.naturalWidth>0, im3.className+'/'+im3.naturalWidth);
+    ok('占位期间百分比不跳变', Math.abs(parseInt(document.querySelector('.pct').textContent)-phPct)<=2,
+       phPct+' -> '+document.querySelector('.pct').textContent);
+    window.Image=RealImage;
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await wait(400);
     // 版本视图
     document.querySelector('#modeSwitch [data-mode="version"]').click(); await wait(600);
     ok('切换版本视图', document.querySelectorAll('.grp').length>0, document.querySelectorAll('.grp').length);

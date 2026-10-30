@@ -60,7 +60,7 @@
     slide: 0, sliding: false, slideBusy: false, _slideTimer: null, ghost: null, _pendingFull: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
     base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _shown: false,
-    _cache: new Map(), _cacheMax: 12,
+    _cache: new Map(), _cacheMax: 12, _loadTimer: null, loadEl: null,
 
     init() {
       if (this.root) return;
@@ -77,6 +77,15 @@
           <div class="lb__canvas">
             <img class="lb__img" alt="" draggable="false">
             <img class="lb__ghost" alt="" draggable="false" hidden>
+          </div>
+          <div class="lb__load" role="status" aria-live="polite">
+            <div class="lb__load-in">
+              <svg class="lb__spin" width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ring" cx="20" cy="20" r="17"></circle>
+                <circle class="arc" cx="20" cy="20" r="17"></circle>
+              </svg>
+              <span class="lb__load-t">载入中</span>
+            </div>
           </div>
           <button class="lb__nav next" aria-label="下一张">›</button>
           <div class="lb__tools">
@@ -99,6 +108,7 @@
       this.img = $(".lb__img", root);
       this.ghost = $(".lb__ghost", root);
       this.info = $(".lb__info", root);
+      this.loadEl = $(".lb__load", root);
 
       $(".lb__close", root).addEventListener("click", () => this.close());
       $(".lb__info-btn", root).addEventListener("click", () => root.classList.toggle("info-off"));
@@ -300,7 +310,13 @@
       // 会让人以为已经是原图了 —— 这正是「大图不像 8K」的来源。
       const it = this.items[this.idx] || {};
       const nat = it.fw || it.w || this.img.naturalWidth || this.base.w;
-      this.natS = Math.max(1, nat / this.base.w);
+      // 低清占位为了撑住最终版位会拉成整宽（object-fit: contain 会留边），
+      // 所以按「实际画出来的宽度」算，免得占位期间百分比跳一下再跳回来
+      const ar = (it.fw && it.fh) ? it.fw / it.fh
+               : (this.img.naturalWidth && this.img.naturalHeight)
+                 ? this.img.naturalWidth / this.img.naturalHeight : 0;
+      const drawn = ar ? Math.min(this.base.w, this.base.h * ar) : this.base.w;
+      this.natS = Math.max(1, nat / (drawn || 1));
       this.maxS = Math.max(2, this.natS * 2);   // 最多放到原生的 200%
     },
 
@@ -427,6 +443,45 @@
       el.dataset.state = state || "";
     },
 
+    /* ---------------- 载入提示 ----------------
+       图片没到位时舞台原本只有一片黑（或停着上一张），看不出任何反馈。
+       这里给一个短延迟的提示：快取命中时根本不会出现，慢的时候才浮出来。 */
+    showLoad(delay = 110) {
+      clearTimeout(this._loadTimer);
+      this._loadTimer = setTimeout(() => {
+        this._loadTimer = null;
+        if (this.loadEl) this.loadEl.classList.add("is-on");
+      }, delay);
+    },
+    hideLoad() {
+      clearTimeout(this._loadTimer);
+      this._loadTimer = null;
+      if (this.loadEl) this.loadEl.classList.remove("is-on");
+    },
+
+    /** 首次打开时的低清占位：缩略图本来就在页面里，模糊压暗当作背景，好过纯黑 */
+    placeholder(src) {
+      const im = this.img;
+      // 版位必须跟最终尺寸一模一样，否则清晰图到位时画面会「长大一圈」。
+      // 画布是 grid 居中、宽度收缩到内容，所以只能按可用宽高把宽度算出来写死。
+      const it = this.items[this.idx] || {};
+      const ar = (it.fw && it.fh) ? it.fw / it.fh : 0;
+      if (ar) {
+        const cs = getComputedStyle(im);
+        const ss = getComputedStyle(this.stage);
+        const maxH = parseFloat(cs.maxHeight) || this.stage.clientHeight;
+        const availW = this.stage.clientWidth
+          - parseFloat(ss.paddingLeft || 0) - parseFloat(ss.paddingRight || 0);
+        const w = Math.min(availW, maxH * ar);
+        if (w > 0) im.style.width = w + "px";
+      }
+      im.classList.add("is-ph");
+      im.src = src;
+      im.classList.add("is-in");
+      this.measure();
+      this.apply(false);
+    },
+
     /* ---------------- 打开 / 切换 ---------------- */
     open(items, i, cfg, groups) {
       this.init();
@@ -442,9 +497,11 @@
       this.sliding = false;
       this.slideBusy = false;
       this._pendingFull = null;
+      this.hideLoad();
       const g = this.ghost;
       if (g) { g.hidden = true; g.removeAttribute("src"); g.classList.remove("is-slide"); }
-      this.img.classList.remove("is-in", "is-slide", "is-quick", "is-anim");
+      this.img.classList.remove("is-in", "is-slide", "is-quick", "is-anim", "is-ph");
+      this.img.style.width = "";
       this.img.removeAttribute("src");
 
       this.refreshRect();
@@ -458,6 +515,8 @@
       this.slideBusy = false;
       this._pendingFull = null;
       this.slide = 0;
+      this.hideLoad();
+      this.img.classList.remove("is-ph");
       this.ghost.hidden = true;
       this.ghost.removeAttribute("src");
       this.ghost.classList.remove("is-slide");
@@ -494,12 +553,16 @@
       this.img.alt = it.title || "";
       const hit = this._cache.get(largeSrc);
       if (hit && hit.ready) {
+        this.hideLoad();
         // 已预取并解码：直接同步上屏，点击即切换
         if (mode === "cut") this.cutTo(largeSrc);
         else if (mode === "quick") this.quickTo(largeSrc, dir);
         else this.paintNext(it, { src: largeSrc }, hadPrev, prevSrc, dir, dx);
         this.preloadNeighbors(i);
       } else {
+      // 位图还没到手：先挂提示（有旧画面时稍等一下再浮出，避免一闪而过）
+      this.showLoad(hadPrev ? 120 : 70);
+      if (!hadPrev && it.thumb) this.placeholder(it.thumb);
       const next = new Image();
       next.onload = () => {
         if (token !== this._token) return;
@@ -518,7 +581,10 @@
           setTimeout(paint, 120);
         } else paint();
       };
-      next.onerror = () => { /* 载入失败保持当前画面，不白屏 */ };
+      next.onerror = () => {
+        // 载入失败：收起提示，保留当前画面（首次打开则停在低清占位上），不白屏
+        if (token === this._token) this.hideLoad();
+      };
       next.src = largeSrc;
       this.img.alt = it.title || "";
       this.preloadNeighbors(i);
@@ -589,10 +655,12 @@
       g.hidden = true;
       g.removeAttribute("src");
       g.classList.remove("is-slide");
-      this.img.classList.remove("is-slide", "is-anim");
+      this.img.classList.remove("is-slide", "is-anim", "is-ph");
+      this.img.style.width = "";
       this.slide = 0;
       this.img.src = src;
       this._shown = true;
+      this.hideLoad();
       this.img.classList.add("is-in");
       this.measure();
       this.refreshRect();
@@ -609,9 +677,11 @@
       g.removeAttribute("src");
       g.classList.remove("is-slide");
 
-      this.img.classList.remove("is-anim", "is-slide", "is-quick");
+      this.img.classList.remove("is-anim", "is-slide", "is-quick", "is-ph");
+      this.img.style.width = "";
       this.img.src = src;
       this._shown = true;
+      this.hideLoad();
       this.img.classList.add("is-in");
       this.measure();
       this.refreshRect();
@@ -676,12 +746,19 @@
     paintNext(it, next, hadPrev, prevSrc, dir, dx) {
       const src = this._fullReady && this._fullSrc ? this._fullSrc : next.src;
       this._shown = true;
+      this.hideLoad();
+      // 占位图直接换成清晰图：不再重放淡入，模糊层自己会退掉
+      const wasPh = this.img.classList.contains("is-ph");
+      this.img.classList.remove("is-ph");
+      this.img.style.width = "";
       if (hadPrev) {
         this.slideTo(src, dir, dx, prevSrc);
       } else {
         this.img.src = src;
-        this.img.classList.remove("is-in");
-        void this.img.offsetWidth;            // 强制重算，否则淡入会被合并掉
+        if (!wasPh) {
+          this.img.classList.remove("is-in");
+          void this.img.offsetWidth;            // 强制重算，否则淡入会被合并掉
+        }
         this.img.classList.add("is-in");
         this.slide = 0;
         this.measure();
