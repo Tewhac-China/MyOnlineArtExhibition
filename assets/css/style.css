@@ -251,6 +251,10 @@ body::before {
   border-left: 2px solid var(--accent);
   color: var(--ink); font-size: 16px; line-height: 2.1;
 }
+/* 末尾那句括注：降一档，像页边小字 */
+.note .aside {
+  margin-top: 1.5em; font-size: 13.5px; line-height: 2; color: var(--faint);
+}
 
 /* 首頁：三個系列卡 */
 .cards { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
@@ -501,6 +505,9 @@ body::before {
 .grp__name { font-family: var(--f-display); font-size: clamp(19px, 2.2vw, 26px); letter-spacing: .06em; }
 .grp__count { font-family: var(--f-mono); font-size: 11px; color: var(--accent); letter-spacing: .1em; }
 .grp__meta { margin-left: auto; font-size: 11.5px; color: var(--muted); letter-spacing: .05em; }
+
+/* 图集现在是第一段，紧接首屏 —— 别在标题和图片之间空出一大截 */
+#works { padding-top: clamp(28px, 3.4vw, 48px); }
 
 /* ---------------------------------------------------------- 展牆 */
 .filters {
