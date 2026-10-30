@@ -29,7 +29,7 @@
       <div class="kicker">系列 02 / 03 · 程序化合成 · 代码作画</div>
       <div class="hero__top">
           <h1>千禧迷思</h1>
-          <a class="skip" href="#works"><span class="skip__a">跳过说明</span><span class="skip__b">直接欣赏</span></a>
+          <a class="skip" href="#how"><span class="skip__a">跳过图片</span><span class="skip__b">阅读介绍</span></a>
       </div>
       <p class="latin">Millennium Myth &nbsp;·&nbsp; Procedural Collage</p>
       <p class="lede">
@@ -47,10 +47,64 @@
   </section>
 
   <!-- ================================================= 生成方式 -->
+  <section class="block" id="note">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">00 / AFTERWORD</div>
+        <div>
+          <h2>关于节点</h2>
+          <p>写在六帧之前。</p>
+        </div>
+      </div>
+
+      <div class="note prose rise">
+        <p>当今是快节奏的时代，事情纷至沓来，往往还没做完一件事，就要开始另一件事，让我们不断处于多线程任务当中。
+          想当年，00后的我们在初高中循序渐进，人生像是在攻克一个又一个节点；而如今，转变为本科生、研究生、社会人之后，
+          可供选择的道路多了起来，向着不同目的事件也被迫多了起来。</p>
+
+        <p class="beat">时间，悄然被事件们排满与并用。</p>
+        <p class="beat beat--q">那节点呢？</p>
+
+        <p>曾经看似大敌的中考高考，通过节点之后，想必大有触动。但如今呢？完成了一份又一份长达几周、几个月甚至
+          几年的事件，这份触动似乎变得暗淡——并不是事件的重要性变低了，而是感到触动的阈值变弱了。
+          <em>「这真的值得触动吗？」</em>你产生了怀疑。在越发的犹豫中，我们获得成功的激情逐渐弱化，
+          想要分享的欲望逐渐磨灭，社会性的表达欲或许终将熄灭。能够引发触动的节点逐渐消失，人生的阶段也将随之逐渐消失。</p>
+
+        <p>但是，完成的事件还在。它们是客观存在的——即便情感上失去了强度，那些时刻的成功与失败依然在那，
+          等待着将来的我们再次把它们翻出、重拾。</p>
+
+        <p>何时重拾？这只能由我们自己给出答案。这意味着，节点和阶段并不是先天的，而是被赋予的。曾经小小的我们，
+          在各种节点上体验过的喜怒哀乐其实大同小异——那时的节点和阶段，是社会多年沉淀积累定义好的「通用节点」。
+          而如今的我们都在自己的道路和进程上，自然就不会遇到被「强定义」的节点——
+          <em>年薪 x 百万？顶刊 x 篇？拿下 xx 名誉？</em>——仅由小圈子、小范围定义的节点，本就没有强约束性，
+          只会让你在触动之前更加犹豫。</p>
+
+        <p class="close">节点，由自己定义。回顾过去，将过去的触动一同掘出，一同品味。
+          当你想要举起铁锹时，我们便活出了属于自己的节律与释然。</p>
+
+        <p class="aside">（为什么是千禧迷思，因为选择拼贴画素材时感觉有「阈限空间」的千禧年梦核感，于是就这样了……）</p>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="works">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">01 / WORKS</div>
+        <div>
+          <h2>六帧</h2>
+          <p>同一个系列标题反复出现在每一帧上（对应参考片的 Z.A.T.O 用法），六个图形锚点各承担一个问题。
+            灯箱里的大图取自 5312×8704 的 8K 原生档。</p>
+        </div>
+      </div>
+      <div class="wall" id="wall" style="--ar:0.6103"></div>
+
+      <figure class="rise" id="proc" style="margin:56px 0 0"></figure>
+    </div>
+  </section>
   <section class="block" id="how">
     <div class="wrap">
       <div class="sec-head rise">
-        <div class="sec-head__num">01 / PIPELINE</div>
+        <div class="sec-head__num">02 / PIPELINE</div>
         <div>
           <h2>生成方式</h2>
           <p>渲染内核是一个 Python 脚本（Pillow + NumPy），没有模型推理。参考片真正值得学的不是它的画面，
@@ -103,12 +157,10 @@
       </div>
     </div>
   </section>
-
-  <!-- ================================================= 人类介入 -->
   <section class="block" id="human">
     <div class="wrap">
       <div class="sec-head rise">
-        <div class="sec-head__num">02 / HUMAN INPUT</div>
+        <div class="sec-head__num">03 / HUMAN INPUT</div>
         <div>
           <h2>人类介入的程度</h2>
           <p>这一组的介入密度是三个系列里最高的 —— 因为它本来就不是「许愿」，而是写代码。
@@ -163,62 +215,6 @@
         介入度：<b>极高</b>。这一组更接近「用代码画画」，而不是「向模型许愿」。
         它同时也是唯一一个完全不含扩散模型的系列 —— 没有任何像素是 AI 画的，AI 参与的是渲染器的代码与文案。
       </blockquote>
-    </div>
-  </section>
-
-  <!-- ================================================= 作品 -->
-  <section class="block" id="works">
-    <div class="wrap">
-      <div class="sec-head rise">
-        <div class="sec-head__num">03 / WORKS</div>
-        <div>
-          <h2>六帧</h2>
-          <p>同一个系列标题反复出现在每一帧上（对应参考片的 Z.A.T.O 用法），六个图形锚点各承担一个问题。
-            灯箱里的大图取自 5312×8704 的 8K 原生档。</p>
-        </div>
-      </div>
-      <div class="wall" id="wall" style="--ar:0.6103"></div>
-
-      <figure class="rise" id="proc" style="margin:56px 0 0"></figure>
-    </div>
-  </section>
-
-  <!-- ================================================= 作者的话 -->
-  <section class="block" id="note">
-    <div class="wrap">
-      <div class="sec-head rise">
-        <div class="sec-head__num">04 / AFTERWORD</div>
-        <div>
-          <h2>关于节点</h2>
-          <p>六帧之后的一点余话。</p>
-        </div>
-      </div>
-
-      <div class="note prose rise">
-        <p>当今是快节奏的时代，事情纷至沓来，往往还没做完一件事，就要开始另一件事，让我们不断处于多线程任务当中。
-          想当年，00后的我们在初高中循序渐进，人生像是在攻克一个又一个节点；而如今，转变为本科生、研究生、社会人之后，
-          可供选择的道路多了起来，向着不同目的事件也被迫多了起来。</p>
-
-        <p class="beat">时间，悄然被事件们排满与并用。</p>
-        <p class="beat beat--q">那节点呢？</p>
-
-        <p>曾经看似大敌的中考高考，通过节点之后，想必大有触动。但如今呢？完成了一份又一份长达几周、几个月甚至
-          几年的事件，这份触动似乎变得暗淡——并不是事件的重要性变低了，而是感到触动的阈值变弱了。
-          <em>「这真的值得触动吗？」</em>你产生了怀疑。在越发的犹豫中，我们获得成功的激情逐渐弱化，
-          想要分享的欲望逐渐磨灭，社会性的表达欲或许终将熄灭。能够引发触动的节点逐渐消失，人生的阶段也将随之逐渐消失。</p>
-
-        <p>但是，完成的事件还在。它们是客观存在的——即便情感上失去了强度，那些时刻的成功与失败依然在那，
-          等待着将来的我们再次把它们翻出、重拾。</p>
-
-        <p>何时重拾？这只能由我们自己给出答案。这意味着，节点和阶段并不是先天的，而是被赋予的。曾经小小的我们，
-          在各种节点上体验过的喜怒哀乐其实大同小异——那时的节点和阶段，是社会多年沉淀积累定义好的「通用节点」。
-          而如今的我们都在自己的道路和进程上，自然就不会遇到被「强定义」的节点——
-          <em>年薪 x 百万？顶刊 x 篇？拿下 xx 名誉？</em>——仅由小圈子、小范围定义的节点，本就没有强约束性，
-          只会让你在触动之前更加犹豫。</p>
-
-        <p class="close">节点，由自己定义。回顾过去，将过去的触动一同掘出，一同品味。
-          当你想要举起铁锹时，我们便活出了属于自己的节律与释然。</p>
-      </div>
     </div>
   </section>
 </main>

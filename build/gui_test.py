@@ -38,8 +38,10 @@ COMFY_T = r"""
     await wait(900);
     var L=Site.LB, secs=document.querySelectorAll('.grp'), chips=document.querySelectorAll('#filters button');
     var sk=document.querySelector('.skip');
-    ok('有「直接欣赏」按钮', !!sk);
+    ok('有「阅读介绍」按钮', !!sk);
     var bar = sk ? getComputedStyle(sk, '::before') : null;
+    ok('「阅读介绍」跳到图集之后', !!sk && sk.getAttribute('href')==='#how', sk && sk.getAttribute('href'));
+    ok('图集排在介绍之前', document.querySelector('#works').compareDocumentPosition(document.querySelector('#how')) & 4, 'works→how');
     ok('「直接欣赏」有强调竖条', !!bar && bar.backgroundColor !== 'rgba(0, 0, 0, 0)' && parseFloat(bar.width) >= 2, bar && (bar.backgroundColor + ' / ' + bar.width));
     ok('主题分组数>0', secs.length>0, secs.length);
     ok('筛选按钮=分组+1', chips.length===secs.length+1, chips.length+'/'+secs.length);

@@ -29,7 +29,7 @@
       <div class="kicker">系列 01 / 03 · 扩散模型 · 纯提示词</div>
       <div class="hero__top">
           <h1>画风所寄</h1>
-          <a class="skip" href="#works"><span class="skip__a">跳过说明</span><span class="skip__b">直接欣赏</span></a>
+          <a class="skip" href="#how"><span class="skip__a">跳过图片</span><span class="skip__b">阅读介绍</span></a>
       </div>
       <p class="latin">My Favourite High Quality &nbsp;·&nbsp; Qwen-Image 2.1 Turbo</p>
       <p class="lede">
@@ -48,10 +48,29 @@
   </section>
 
   <!-- ================================================= 生成方式 -->
+  <section class="block" id="works">
+    <div class="wrap">
+      <div class="sec-head rise">
+        <div class="sec-head__num">01 / WORKS</div>
+        <div>
+          <h2><span data-n="items">—</span> 张，按主题归类</h2>
+          <p>同一套配方在几十个场景里各跑一遍：舞台、剧场、麦田、屋顶、废墟、镜厅、列车、神社……
+            可以切成「按主题」或「按版本谱系」两种看法。点开任意一张可看到种子、步数、p50 / edgeN 与完整原始提示词。</p>
+        </div>
+      </div>
+
+      <div class="mode-switch" id="modeSwitch">
+        <button data-mode="theme" class="is-on">按主题</button>
+        <button data-mode="version">按版本谱系</button>
+      </div>
+      <nav class="filters" id="filters"></nav>
+      <div id="groups"></div>
+    </div>
+  </section>
   <section class="block" id="how">
     <div class="wrap">
       <div class="sec-head rise">
-        <div class="sec-head__num">01 / PIPELINE</div>
+        <div class="sec-head__num">02 / PIPELINE</div>
         <div>
           <h2>生成方式</h2>
           <p>单模型直出。每一张 PNG 内嵌完整的 <code>prompt</code> 元数据，提示词、种子、步数、cfg、模型名都可逐张回读 ——
@@ -108,12 +127,10 @@
       <div class="lineage rise" id="lineage"></div>
     </div>
   </section>
-
-  <!-- ================================================= 人类介入 -->
   <section class="block" id="human">
     <div class="wrap">
       <div class="sec-head rise">
-        <div class="sec-head__num">02 / HUMAN INPUT</div>
+        <div class="sec-head__num">03 / HUMAN INPUT</div>
         <div>
           <h2>人类介入的程度</h2>
           <p>五个维度逐项打分（0–5）。这个系列的形状很特别：前四项接近满分，最后一项是零 ——
@@ -168,27 +185,6 @@
         介入度：<b>高</b>，但介入全部发生在语言与判断层。人决定的是「该画什么」和「哪一张算数」，
         像素层完全交给模型 —— 每一根线条都是它画的，包括那些画错的。
       </blockquote>
-    </div>
-  </section>
-
-  <!-- ================================================= 作品 -->
-  <section class="block" id="works">
-    <div class="wrap">
-      <div class="sec-head rise">
-        <div class="sec-head__num">03 / WORKS</div>
-        <div>
-          <h2><span data-n="items">—</span> 张，按主题归类</h2>
-          <p>同一套配方在几十个场景里各跑一遍：舞台、剧场、麦田、屋顶、废墟、镜厅、列车、神社……
-            可以切成「按主题」或「按版本谱系」两种看法。点开任意一张可看到种子、步数、p50 / edgeN 与完整原始提示词。</p>
-        </div>
-      </div>
-
-      <div class="mode-switch" id="modeSwitch">
-        <button data-mode="theme" class="is-on">按主题</button>
-        <button data-mode="version">按版本谱系</button>
-      </div>
-      <nav class="filters" id="filters"></nav>
-      <div id="groups"></div>
     </div>
   </section>
 </main>
