@@ -228,6 +228,30 @@ body::before {
   border-radius: 2px;
 }
 
+/* ---------------------------------------------------------- 作者的话 */
+/* 正文里嵌两处「短句停顿」，收尾一段用强调竖线压住 */
+.note { max-width: 40em; }
+.note p {
+  margin: 0 0 1.3em; font-size: 15.5px; line-height: 2.15;
+  color: #b9b4aa; text-align: justify;
+}
+.note p:last-child { margin-bottom: 0; }
+.note .beat {
+  font-family: var(--f-display); font-size: clamp(18px, 2.1vw, 23px);
+  line-height: 1.9; letter-spacing: .05em; color: var(--ink);
+  margin: 1.7em 0;
+}
+.note .beat--q {
+  font-size: clamp(22px, 3vw, 30px); letter-spacing: .09em;
+  color: var(--accent); margin-top: .2em;
+}
+.note em { font-style: normal; color: var(--ink); }
+.note .close {
+  margin-top: 1.8em; padding: 20px 0 20px 22px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink); font-size: 16px; line-height: 2.1;
+}
+
 /* 首頁：三個系列卡 */
 .cards { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .card {
@@ -741,6 +765,10 @@ body.theme-collage .wall { --min: 168px; }
   .sec-head h2 { font-size: clamp(23px, 6.4vw, 32px); }
   .sec-head p { font-size: 13.5px; }
   .prose { font-size: 14px; line-height: 1.95; }
+  .note p { font-size: 14.5px; line-height: 2.05; }
+  .note .beat { font-size: 18px; margin: 1.4em 0; }
+  .note .beat--q { font-size: 22px; }
+  .note .close { font-size: 15px; padding: 16px 0 16px 16px; }
 
   .hero__top { align-items: flex-end; }
   .skip { padding: 10px 16px 11px 16px; }
