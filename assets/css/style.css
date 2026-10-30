@@ -592,12 +592,14 @@ body.theme-collage .wall { --min: 168px; }
   max-width: 100%; max-height: calc(100svh - 148px);
   object-fit: contain;
   box-shadow: 0 30px 80px rgba(0,0,0,.6);
-  opacity: 0; transition: opacity .35s;
+  opacity: 0; transition: opacity .35s, filter .45s;
   transform-origin: center center; will-change: transform;
   user-select: none; -webkit-user-drag: none; -webkit-user-select: none;
 }
 .lb__stage img.is-in { opacity: 1; }
-.lb__stage img.is-anim { transition: opacity .35s, transform .24s cubic-bezier(.2,.7,.2,1); }
+/* 低清占位：缩略图按最终版位撑开后压暗模糊，清晰图到了再自己化开 */
+.lb__stage img.is-ph { opacity: .58; filter: blur(10px) saturate(.95); box-shadow: none; }
+.lb__stage img.is-anim { transition: opacity .35s, transform .24s cubic-bezier(.2,.7,.2,1), filter .45s; }
 /* 切换时旧画面交给 ghost，与主图占同一个格子，尺寸规则完全一致才不会跳版 */
 /* 旧画面绝对定位在画布内，尺寸永远不超过主图，也不会参与布局把主图挤动 */
 .lb__stage img.lb__ghost {
@@ -614,6 +616,39 @@ body.theme-collage .wall { --min: 168px; }
 @media (prefers-reduced-motion: reduce) {
   .lb__stage img.is-quick { transition: transform .12s cubic-bezier(.2,.7,.3,1); }
 .lb__stage img.is-slide { transition-duration: .01s; }
+}
+
+/* 载入中：把旧画面压暗，细弧旋转 + 等宽小字，避免「点了没反应」的纯黑空档 */
+.lb__load {
+  position: absolute; inset: 0; z-index: 3;
+  display: grid; place-items: center;
+  background: rgba(7,7,8,.6);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .22s ease, visibility 0s linear .22s;
+}
+.lb__load.is-on { opacity: 1; visibility: visible; transition: opacity .22s ease, visibility 0s; }
+.lb__load-in {
+  display: flex; flex-direction: column; align-items: center; gap: 15px;
+  padding: 24px 30px 20px;
+  background: rgba(12,12,13,.92);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+}
+.lb__spin {
+  display: block; color: var(--accent);
+  animation: lbSpin 1.15s linear infinite;
+}
+.lb__spin circle { fill: none; stroke-width: 1.8; }
+.lb__spin .ring { stroke: rgba(234,231,224,.18); }
+.lb__spin .arc { stroke: currentColor; stroke-linecap: round; stroke-dasharray: 30 78; }
+@keyframes lbSpin { to { transform: rotate(360deg); } }
+.lb__load-t {
+  font-family: var(--f-mono); font-size: 11px; line-height: 1;
+  letter-spacing: .3em; text-indent: .3em; color: rgba(234,231,224,.7);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb__spin { animation-duration: 2.6s; }
+  .lb__load { transition: none; }
 }
 
 /* 缩放工具条 */
