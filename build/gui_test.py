@@ -141,6 +141,8 @@ BG_T = r"""
     await wait(900);
     var L=Site.LB, secs=document.querySelectorAll('#seriesWrap .block'), chips=document.querySelectorAll('#filters button');
     var all=document.querySelectorAll('.shot');
+    ok('系列图集在介绍之前', !!document.querySelector('#seriesWrap') &&
+       !!(document.querySelector('#seriesWrap').compareDocumentPosition(document.querySelector('#how')) & 4), 'seriesWrap→how');
     ok('系列数=5', secs.length===5, secs.length);
     ok('筛选按钮=系列+1', chips.length===secs.length+1, chips.length);
     ok('作品数>100', all.length>100, all.length);

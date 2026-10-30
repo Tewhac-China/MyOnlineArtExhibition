@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>东方风背景图 · Touhou Backgrounds</title>
 <meta name="description" content="五个系列、百余张无人无字的纯背景：模仿东方Project系列作品封面的背景图设计，素材库照片 + 色轴映射 + 程序化光效。">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0b">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="theme-bg">
@@ -51,7 +55,7 @@
   </section>
 
   <!-- ================================================= 生成方式 -->
-  <section class="block block--tight" id="works" style="border-bottom:0">
+  <section class="block block--tight" id="works" style="border-bottom:0;padding-bottom:0">
     <div class="wrap">
       <div class="sec-head rise">
         <div class="sec-head__num">01 / WORKS</div>
@@ -63,6 +67,7 @@
       <nav class="filters" id="filters"></nav>
     </div>
   </section>
+  <div id="seriesWrap"></div>
   <section class="block" id="how">
     <div class="wrap">
       <div class="sec-head rise">
@@ -173,8 +178,6 @@
       </blockquote>
     </div>
   </section>
-
-  <div id="seriesWrap"></div>
 </main>
 
 <footer class="foot">
@@ -229,7 +232,7 @@
 
   D.series.forEach((s, si) => {
     const sec = document.createElement("section");
-    sec.className = "block";
+    sec.className = "block series-sec";
     sec.id = "s-" + s.key;
     const ov = s.overview
       ? `<figure class="series-ov">

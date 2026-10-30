@@ -508,6 +508,8 @@ body::before {
 
 /* 图集现在是第一段，紧接首屏 —— 别在标题和图片之间空出一大截 */
 #works { padding-top: clamp(28px, 3.4vw, 48px); }
+/* 背景页的五个系列紧接筛选条，收一收节间留白 */
+.series-sec { padding-top: clamp(36px, 4.4vw, 64px) !important; }
 
 /* ---------------------------------------------------------- 展牆 */
 .filters {
