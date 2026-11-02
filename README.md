@@ -15,7 +15,7 @@ assets/js/app.js      共用交互（顶栏 / 进场 / 展墙 / 筛选 / 图片�
 assets/data/*.js      window.__DATA_* 数据（由 build_site.py 产生，勿手改）
 assets/img/<coll>/    t_NNN.webp 缩略图（640）· l_NNN.webp 快图（1600，8K 源 2200）· f_NNN.webp 原图（原始分辨率）
 assets/favicon.svg    站点图标（一笔金色笔触）；另有 32px PNG 与 180px apple-touch-icon
-assets/fonts/         标题字体子集（仅在系统未安装该字体时才会下载）
+assets/fonts/         标题字体子集 kinghwa-sub.woff2（714KB，首选）+ .ttf（老浏览器兜底）
 build/build_site.py   扫描来源目录 → 生成图片与数据
 build/subset_fonts.py 把标题字体裁成本站用到的字
 ```
@@ -33,8 +33,14 @@ build/subset_fonts.py 把标题字体裁成本站用到的字
 在简体正文下会逐字回退成别的字体，因此不再使用。
 
 `@font-face` 先试 `local()`（本机已装则零下载），失败才回落到 `assets/fonts/` 的子集。
-子集脚本扫描 HTML、数据文件，以及 CSS 里 `content:""` 写出的文字 —— 漏掉最后一处，
+子集脚本扫描 HTML、数据文件、**`assets/js/app.js`**（界面文案在 JS 里），
+以及 CSS 里 `content:""` 写出的文字 —— 漏掉任何一处，
 像灯箱分组标签「所在 · 」这种只在样式里出现的字就会静默回退成别的字体。
+
+**手机字体不对的根因就是这个**：缺字是逐字回退、不报错，
+装了本机字体的机器（作者本机）完全看不出异常，只有在没有该字体的手机上才露馅。
+所以 `build/subset_fonts.py` 裁完会回读 cmap 逐字核对，缺一个字就 `exit 1`。
+改完文案/新增作品后必须重跑一次，再提交 `assets/fonts/` 下的两份文件。
 
 ## 图片查看器（灯箱）
 

@@ -9,9 +9,14 @@
 
 @font-face {
   font-family: "KingHwaSite";
+  /* local() 命中就零下载（作者本机装了字）；手机没有这个字，必然走 url()。
+     woff2 在前：714KB，ttf 是给极老浏览器的兜底，正常情况下不会被下载。 */
   src: local("KingHwaOldSong"), local("京華老宋体 v3.0"), local("京華老宋體 v3.0"),
+       url("../fonts/kinghwa-sub.woff2") format("woff2"),
        url("../fonts/kinghwa-sub.ttf") format("truetype");
   font-display: swap;
+  font-weight: 400;
+  font-style: normal;
 }
 
 :root {
@@ -27,10 +32,15 @@
   --accent-soft: rgba(201, 162, 39, 0.12);
 
   --f-sans: "Source Han Sans SC", "Source Han Sans", "Noto Sans SC",
-            "Microsoft YaHei", "PingFang SC", sans-serif;
-  --f-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
-  /* 標題一律用京華老宋體：它是 GB 字庫，簡體字形齊全（40k+ 字） */
-  --f-display: "KingHwaSite", "KingHwaOldSong", "Noto Serif SC", serif;
+            "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --f-serif: "Noto Serif SC", "Source Han Serif SC", "Noto Serif CJK SC",
+             "Songti SC", "SimSun", serif;
+  /* 標題一律用京華老宋體：它是 GB 字庫，簡體字形齊全（40k+ 字）。
+     url() 那份子集必须覆盖全站用字：缺字只会逐字回退、不会报错，
+     在装了本机字体的机器上完全看不出来（手机才会露馅），
+     所以由 build/subset_fonts.py 在构建时逐字校验。 */
+  --f-display: "KingHwaSite", "KingHwaOldSong", "京華老宋体 v3.0", "京華老宋體 v3.0",
+               "Songti SC", "Noto Serif CJK SC", "Noto Serif SC", serif;
   --f-mono: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
 
   --pad: clamp(20px, 5vw, 76px);
