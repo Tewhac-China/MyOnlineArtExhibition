@@ -588,18 +588,22 @@ body.theme-collage .wall { --min: 168px; }
   background: #070708;
   opacity: 0; pointer-events: none;
   transition: opacity .28s;
+  /* 带 AI 标识的作品要在画面下缘画一条黑条：这条留白同时加到舞台下边距和
+     图片限高上 —— 每个断点各算各的，不用一条 viewport 算术去盖掉另一套。 */
+  --mark-pad: 0px;
 }
+.lb.has-mark { --mark-pad: 56px; }
 .lb.is-open { opacity: 1; pointer-events: auto; }
 .lb__stage {
   position: relative; display: grid; place-items: center;
-  padding: 40px 34px 96px; min-height: 0; overflow: hidden;
+  padding: 40px 34px calc(96px + var(--mark-pad)); min-height: 0; overflow: hidden;
   touch-action: none; cursor: zoom-in;
 }
 .lb__stage.is-zoomed { cursor: grab; }
 .lb__stage.is-dragging { cursor: grabbing; }
 .lb__canvas { position: relative; max-width: 100%; line-height: 0; }
 .lb__stage img {
-  max-width: 100%; max-height: calc(100svh - 148px);
+  max-width: 100%; max-height: calc(100svh - 148px - var(--mark-pad));
   object-fit: contain;
   box-shadow: 0 30px 80px rgba(0,0,0,.6);
   opacity: 0; transition: opacity .35s, filter .45s;
@@ -618,6 +622,26 @@ body.theme-collage .wall { --min: 168px; }
   z-index: 1; pointer-events: none; opacity: 1;
 }
 .lb__img { position: relative; z-index: 2; }
+/* AI 显式标识：黑条由前端画在画面下缘，图片文件保持干净像素。
+   尺寸、字号、位移都由 app.js 的 syncMark() 按当前变换算，
+   过渡时长必须与 .lb__img 的三态一致，否则缩放/滑动时条会和画面脱开。 */
+.lb__mark {
+  position: absolute; left: 0; top: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  transform-origin: 50% 0; transform: translate3d(0, 0, 0) scale(1);
+  background: #000; color: var(--accent);
+  font-family: var(--f-sans); font-weight: 700; letter-spacing: .05em;
+  white-space: nowrap; overflow: hidden; z-index: 3; pointer-events: none;
+  will-change: transform;
+}
+.lb__mark[hidden] { display: none; }
+.lb__mark__no { font-family: var(--f-mono); font-weight: 400; letter-spacing: .08em; opacity: .62; }
+.lb__mark.is-anim  { transition: transform .24s cubic-bezier(.2,.7,.2,1); }
+.lb__mark.is-quick { transition: transform .12s cubic-bezier(.2,.7,.3,1); }
+.lb__mark.is-slide { transition: transform .38s cubic-bezier(.2,.72,.24,1); }
+/* 舞台是 overflow:hidden 且下边距原本只够放工具条：黑条画在画面下缘会正好压到
+   工具条上，或被裁掉。留白由 .lb 上的 --mark-pad 统一承担（同时加到 padding-bottom
+   和从图片限高里扣掉），带标识的作品才有地方放这条。 */
 .lb__stage img.is-quick { transition: transform .12s cubic-bezier(.2,.7,.3,1); }
 .lb__stage img.is-slide {
   transition: transform .38s cubic-bezier(.2,.72,.24,1);
@@ -678,6 +702,9 @@ body.theme-collage .wall { --min: 168px; }
 .lb__tools button:hover { background: rgba(255,255,255,.09); }
 .lb__tools button:active { background: var(--accent); color: #0a0a0b; }
 .lb__tools button.is-done { background: var(--accent); color: #0a0a0b; }
+/* 原图档已上屏：用描底色表示「这一档是原始编码」，不抢 ⤢/1:1 的视觉重量 */
+.lb__tools button.is-on { background: var(--accent-soft); color: var(--accent); }
+.lb__tools button:disabled { color: var(--faint); opacity: .45; cursor: default; background: transparent; }
 .lb__tools .pct { min-width: 62px; color: var(--muted); }
 .lb__tools .pct:hover { color: var(--ink); }
 .lb__sep { width: 1px; height: 18px; background: var(--line-2); margin: 0 4px; }
@@ -706,6 +733,8 @@ body.theme-collage .wall { --min: 168px; }
   letter-spacing: .12em; color: var(--faint);
 }
 .lb__res[data-state="loading"] { color: var(--accent); opacity: .8; }
+/* 还没要原图：空心方块，和已到位的实心方块成对，一眼看出当前是哪一档 */
+.lb__res[data-state="idle"]::before { content: "◻ "; color: var(--faint); font-size: 7px; vertical-align: 2px; }
 .lb__res[data-state="ready"]::before { content: "◼ "; color: var(--accent); font-size: 7px; vertical-align: 2px; }
 .lb__res[data-state="error"] { color: #c9736b; }
 .lb__rows { margin: 22px 0 0; border-top: 1px solid var(--line); }
@@ -747,7 +776,7 @@ body.theme-collage .wall { --min: 168px; }
 .lb__info-btn:hover { background: var(--accent); color: #0a0a0b; }
 .lb.info-off { grid-template-columns: 1fr; grid-template-rows: 1fr; }
 .lb.info-off .lb__info { display: none; }
-.lb.info-off .lb__stage img { max-height: calc(100svh - 148px); }
+.lb.info-off .lb__stage img { max-height: calc(100svh - 148px - var(--mark-pad)); }
 
 /* 頁尾 */
 .foot {
@@ -774,8 +803,8 @@ body.theme-collage .wall { --min: 168px; }
   .lb { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
   .lb.info-off { grid-template-rows: 1fr; }
   .lb__info { border-left: 0; border-top: 1px solid var(--line); max-height: 38svh; }
-  .lb__stage { padding: 26px 16px 92px; }
-  .lb__stage img { max-height: calc(58svh - 40px); }
+  .lb__stage { padding: 26px 16px calc(92px + var(--mark-pad)); }
+  .lb__stage img { max-height: calc(58svh - 40px - var(--mark-pad)); }
   .foot__in { grid-template-columns: 1fr; }
   .lineage__row { grid-template-columns: 110px 1fr; }
   .lineage__v { grid-column: 1 / 2; }
@@ -870,14 +899,16 @@ body.theme-collage .wall { --min: 168px; }
 
   /* 灯箱：竖屏铺满，工具条贴底 */
   .lb { grid-template-rows: 1fr auto; }
-  .lb__stage { padding: 12px 8px 72px; }
-  .lb__stage img { max-height: calc(62svh - 30px); }
+  .lb__stage { padding: 12px 8px calc(72px + var(--mark-pad)); }
+  .lb__stage img { max-height: calc(62svh - 30px - var(--mark-pad)); }
+  /* 手机上工具条按钮更高、还会换行成两排，黑条要留得更深 */
+  .lb.has-mark { --mark-pad: 96px; }
   .lb__info { max-height: 34svh; padding: 18px 16px 26px; }
   .lb__title { font-size: 21px; }
   .lb__nav { width: 36px; height: 36px; font-size: 14px; }
   .lb__nav.prev { left: 4px; }
   .lb__nav.next { right: 4px; }
-  .lb__tools { bottom: 12px; padding: 3px; }
+  .lb__tools { bottom: 12px; padding: 3px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 20px); }
   .lb__tools button { min-width: 40px; height: 38px; font-size: 13px; }
   .lb__tools .pct { min-width: 58px; }
     .lb__close, .lb__info-btn { width: 34px; height: 34px; top: 10px; }
@@ -899,8 +930,8 @@ body.theme-collage .wall { --min: 168px; }
 @media (max-height: 520px) and (orientation: landscape) {
   .lb { grid-template-columns: 1fr 300px; grid-template-rows: 1fr; }
   .lb__info { border-left: 1px solid var(--line); border-top: 0; max-height: none; }
-  .lb__stage { padding: 14px 12px 70px; }
-  .lb__stage img { max-height: calc(100svh - 96px); }
+  .lb__stage { padding: 14px 12px calc(70px + var(--mark-pad)); }
+  .lb__stage img { max-height: calc(100svh - 96px - var(--mark-pad)); }
     .lb__tools { bottom: 10px; }
 }
 

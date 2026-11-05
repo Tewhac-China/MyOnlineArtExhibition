@@ -59,8 +59,10 @@
     s: 1, tx: 0, ty: 0, natS: 1, maxS: 16,
     slide: 0, sliding: false, slideBusy: false, _slideTimer: null, ghost: null, _pendingFull: null,
     pointers: new Map(), dragBase: null, pinch: null, moved: 0,
-    base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _shown: false,
+    base: { w: 1, h: 1 }, lastTap: 0, _token: 0, _fullSrc: null, _fullReady: false, _fullOn: false, _afterFull: null,
+    _shown: false, _prefT: null,
     _cache: new Map(), _cacheMax: 12, _loadTimer: null, loadEl: null,
+    markEl: null, markT: null, markNo: null, _markGeom: null, _markRetry: null, _markTries: 0,
 
     init() {
       if (this.root) return;
@@ -77,6 +79,7 @@
           <div class="lb__canvas">
             <img class="lb__img" alt="" draggable="false">
             <img class="lb__ghost" alt="" draggable="false" hidden>
+            <div class="lb__mark" hidden><span class="lb__mark__t"></span><span class="lb__mark__no"></span></div>
           </div>
           <div class="lb__load" role="status" aria-live="polite">
             <div class="lb__load-in">
@@ -95,6 +98,7 @@
             <span class="lb__sep"></span>
             <button data-act="fit" aria-label="适应窗口" title="适应窗口">⤢</button>
             <button data-act="one" aria-label="原始大小" title="1:1 原始像素">1:1</button>
+            <button data-act="full" aria-label="显示原图" title="显示原图（O）· 原始分辨率与原始编码">原图</button>
             <span class="lb__sep"></span>
             <button data-act="dl" aria-label="下载原图" title="下载原图（D）">↓</button>
             <button data-act="fs" aria-label="全屏查看" title="全屏（F）">⛶</button>
@@ -109,6 +113,9 @@
       this.ghost = $(".lb__ghost", root);
       this.info = $(".lb__info", root);
       this.loadEl = $(".lb__load", root);
+      this.markEl = $(".lb__mark", root);
+      this.markT = $(".lb__mark__t", root);
+      this.markNo = $(".lb__mark__no", root);
 
       $(".lb__close", root).addEventListener("click", () => this.close());
       $(".lb__info-btn", root).addEventListener("click", () => root.classList.toggle("info-off"));
@@ -127,6 +134,7 @@
           else if (a === "out") this.zoomBy(1 / 1.4);
           else if (a === "reset" || a === "fit") this.reset();
           else if (a === "one") this.actualSize();
+          else if (a === "full") this.toggleFull(b);
           else if (a === "dl") this.download(b);
           else if (a === "fs") this.toggleFullscreen();
         });
@@ -152,6 +160,7 @@
         else if (e.key === "+" || e.key === "=") this.zoomBy(1.4);
         else if (e.key === "-") this.zoomBy(1 / 1.4);
         else if (e.key === "0") this.reset();
+        else if (e.key === "o" || e.key === "O") this.toggleFull($('[data-act="full"]', root));
         else if (e.key === "d" || e.key === "D") {
           const b = $('[data-act="dl"]', root);
           this.download(b);
@@ -163,6 +172,13 @@
         if (!root.classList.contains("is-open")) return;
         this.refreshRect();
         this.reset();
+      });
+      // 位图真正上屏（含灯箱档 ⇄ 原图档就地换图）是「几何尺寸此刻才算准」的时刻：
+      // 换 src 的那一帧 clientWidth 可能还是 0，量到的都是废值，重排一次才收口。
+      this.img.addEventListener("load", () => {
+        if (!root.classList.contains("is-open") || this.slideBusy) return;
+        this.measure();
+        this.apply(false);
       });
     },
 
@@ -344,10 +360,92 @@
     },
 
     actualSize() {
+      const it = this.items[this.idx] || {};
+      // 1:1 的语义是「一个原始像素对一个 CSS 像素」。灯箱档被限幅时，
+      // 只有原图真在屏上才谈得上 1:1 —— 所以按需取原图，落地后再放大，
+      // 而不是把 3000 的位图拉成 5312 还显示 100%。
+      const capped = (it.fw || it.w) > (it.lw || it.fw || it.w);
+      if (this._fullSrc && capped && !this._fullOn) {
+        this._afterFull = () => this.zoomNat();
+        this.toggleFull($('[data-act="full"]', this.root));
+        return;
+      }
+      this.zoomNat();
+    },
+
+    zoomNat() {
       this.measure();
       this.s = 1; this.tx = 0; this.ty = 0;
       this.zoomTo(this.natS,
                  this._rl + this._rw / 2, this._rt + this._rh / 2, true);
+    },
+
+    /** 还没要原图时，信息栏说什么 */
+    resIdle(it) {
+      const fw = it.fw || it.w, fh = it.fh || it.h;
+      const lw = it.lw || fw, lh = it.lh || fh;
+      return lw < fw
+        ? `原图 ${fw} × ${fh} · 当前 ${lw} × ${lh}，按 O 取原图`
+        : `原图 ${fw} × ${fh} · 按 O 取原始编码`;
+    },
+
+    setFullBtn() {
+      const b = $('[data-act="full"]', this.root);
+      if (!b) return;
+      const on = !!this._fullOn;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      // 长边不超过 FULL_MIN_EDGE 的那些没有独立原图档（灯箱档就是原图）：
+      // 按钮必须显式禁用并说明原因，按下去没反应是最让人怀疑坏掉的做法。
+      const has = !!this._fullSrc;
+      b.disabled = !has;
+      b.title = !has ? "灯箱档即原图，无更高编码档"
+                     : on ? "已显示原图（再按一次退回灯箱档）"
+                          : "显示原图（O）· 原始分辨率与原始编码";
+    },
+
+    /** 原图档：显式请求，到位后就地替换；再按一次退回灯箱档 */
+    toggleFull(btn) {
+      const it = this.items[this.idx] || {};
+      const src = this._fullSrc;
+      if (!src) return;
+      const token = this._token;
+      if (this._fullOn) {
+        this._fullOn = false;
+        this.img.src = it.large || it.thumb;
+        this.setRes(this.resIdle(it), "idle");
+        this.setFullBtn();
+        requestAnimationFrame(() => { this.measure(); this.apply(false); });
+        return;
+      }
+      const land = () => {
+        if (token !== this._token) return;
+        this._fullReady = true; this._fullOn = true;
+        this.hideLoad();
+        if (this.slideBusy) { this._pendingFull = src; this.setFullBtn(); return; }
+        this.img.src = src;
+        this.setRes(`原图 · ${it.fw || it.w} × ${it.fh || it.h}`, "ready");
+        this.setFullBtn();
+        // rAF 在页面不可见时不跑（后台标签页、被节流的窗口），
+        // 只挂 rAF 会让「原图已到位但 1:1 没跟上」这种状态卡住；补一次兜底，
+        // 跑两遍无害（measure/apply 幂等，_afterFull 第二次已经空了）。
+        const after = () => {
+          this.measure(); this.apply(false);
+          if (this._afterFull) { const f = this._afterFull; this._afterFull = null; f(); }
+        };
+        requestAnimationFrame(after);
+        setTimeout(after, 120);
+      };
+      const e = this.preload(src);
+      if (!e) return;
+      if (e.ready) { land(); return; }
+      this.showLoad(0);
+      this.setRes("载入原图…", "loading");
+      e.el.addEventListener("load", land, { once: true });
+      e.el.addEventListener("error", () => {
+        this.hideLoad();
+        if (token === this._token) this.setRes("原图载入失败", "error");
+      }, { once: true });
     },
 
     /** 舞台尺寸只在打开 / 尺寸变化 / 图片切换后量一次，拖动时不再读布局 */
@@ -368,27 +466,94 @@
       this.ty = clamp(this.ty, -my, my);
     },
 
-    /** 下载当前这张的原图（有 full 就是原始分辨率） */
+    /** 下载：文件名沿用源目录的原始输出名，方便和本地图库对照。
+        带 AI 标识的系列由 canvas 现场合成「画面 + 黑条」再导出 ——
+        发布的图片文件保持干净像素，标识只在交付那一刻加上。 */
     download(btn) {
       const it = this.items[this.idx] || {};
       const src = it.full || it.large || it.thumb;
       if (!src) return;
-      // 文件名沿用原始输出名，只是换成实际发布的 webp 后缀，方便和源目录对照
-      const name = String(it.file || "image").replace(/\.[^.]+$/, "") + ".webp";
+      const stem = String(it.file || "image").replace(/\.[^.]+$/, "");
+      if (!it.ai) { this.linkDownload(src, stem + "." + this.extOf(src), btn); return; }
+      this.showLoad(0);
+      this.setRes("生成带标识文件…", "loading");
+      this.composeWithMark(it, src).then(res => {
+        this.hideLoad();
+        if (res && res.url) {
+          this.linkDownload(res.url, stem + "." + res.ext, btn, true);
+          this.setRes(`已导出带标识文件 · ${res.px}`, "ready");
+        } else {
+          // 浏览器画不动（超大画幅）时退回原始文件，并说清楚它没有黑条
+          this.linkDownload(src, stem + "." + this.extOf(src), btn);
+          this.setRes("画幅太大合成不了，已导出原始文件（无标识条）", "error");
+        }
+      });
+    },
+
+    extOf(src) {
+      return (String(src).match(/\.(webp|jpe?g|png)$/i) || [, "webp"])[1].toLowerCase();
+    },
+
+    linkDownload(href, name, btn, revoke) {
       const a = document.createElement("a");
-      a.href = src;
+      a.href = href;
       a.download = name;
       a.rel = "noopener";
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => a.remove(), 0);
+      setTimeout(() => { a.remove(); if (revoke) URL.revokeObjectURL(href); }, 0);
       if (btn) {
         const t = btn.textContent;
         btn.classList.add("is-done");
         btn.textContent = "✓";
         setTimeout(() => { btn.classList.remove("is-done"); btn.textContent = t; }, 1100);
       }
+    },
+
+    /** 画面 + 黑条 合成一张导出图。超大画幅（>24M 像素）浏览器会画崩，
+        直接返回 null 让调用方退回原始文件。 */
+    composeWithMark(it, src) {
+      return this.ensureImage(src).then(img => {
+        const w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h || w * h > 24e6) return null;
+        const bar = Math.max(24, Math.round(h * 0.045));
+        const fs = Math.max(12, Math.round(bar * 0.52));
+        const cv = document.createElement("canvas");
+        cv.width = w; cv.height = h + bar;
+        const g = cv.getContext("2d");
+        g.fillStyle = "#000";
+        g.fillRect(0, 0, cv.width, cv.height);
+        g.drawImage(img, 0, 0, w, h);
+        g.fillStyle = "#c9a227";
+        g.textBaseline = "middle";
+        g.font = `700 ${fs}px "Source Han Sans SC", "Noto Sans SC", sans-serif`;
+        g.fillText(it.ai, Math.round(bar * 0.3), h + bar / 2);
+        if (it.id) {
+          g.font = `${Math.round(fs * 0.8)}px ui-monospace, Consolas, monospace`;
+          g.globalAlpha = 0.62;
+          const tw = g.measureText(it.id).width;
+          g.fillText(it.id, w - Math.round(bar * 0.3) - tw, h + bar / 2);
+          g.globalAlpha = 1;
+        }
+        const asBlob = type => new Promise(done => {
+          try { cv.toBlob(b => done(b), type, 0.92); } catch (err) { done(null); }
+        });
+        return asBlob("image/webp").then(b => b ? [b, "webp"] : asBlob("image/jpeg").then(b2 => b2 ? [b2, "jpg"] : null))
+          .then(pair => pair && {url: URL.createObjectURL(pair[0]), ext: pair[1], px: `${w} × ${h + bar}`});
+      }).catch(() => null);
+    },
+
+    /** 取一张已解码的位图用于合成：优先用预取缓存，省一次重复请求 */
+    ensureImage(src) {
+      const e = this.preload(src);
+      if (e && e.el && e.el.naturalWidth) return Promise.resolve(e.el);
+      const im = new Image();
+      return new Promise((res, rej) => {
+        im.onload = () => res(im);
+        im.onerror = rej;
+        im.src = src;
+      });
     },
 
     /** 全屏：把灯箱本体推进全屏，省掉浏览器边框，图能多占一截 */
@@ -430,10 +595,64 @@
       im.style.transform = `translate3d(${this.tx + this.slide}px, ${this.ty}px, 0) scale(${this.s})`;
       this.stage.classList.toggle("is-zoomed", this.s > 1.001);
       this.syncPct();
+      this.syncMark();
       if (anim) {
         clearTimeout(this._t);
-        this._t = setTimeout(() => im.classList.remove("is-anim"), 240);
+        this._t = setTimeout(() => { im.classList.remove("is-anim"); this.syncMark(); }, 240);
       }
+    },
+
+    /* ---------------- AI 显式标识：前端画的黑条 ----------------
+       图片文件本身是干净像素，条由 DOM 贴在画面下缘，位置用与图片完全相同的
+       变换算出来，所以缩放平移时它始终贴着底边、和画面一起放大。
+       图片绕自身中心缩放（底缘下移 bh/2·(s-1)），黑条绕自身顶边缩放。 */
+    syncMark() {
+      const m = this.markEl;
+      if (!m) return;
+      const im = this.img;
+      m.classList.toggle("is-anim", im.classList.contains("is-anim"));
+      m.classList.toggle("is-quick", im.classList.contains("is-quick"));
+      m.classList.toggle("is-slide", im.classList.contains("is-slide"));
+      const it = this.items[this.idx] || {};
+      this.root.classList.toggle("has-mark", !!it.ai);
+      if (!it.ai) {
+        m.hidden = true;
+        this._markGeom = null;
+        clearTimeout(this._markRetry); this._markRetry = null;
+        return;
+      }
+      const bw = this.base.w, bh = this.base.h;
+      // 换档的那一帧（灯箱档 ⇄ 原图档、占位 → 真图）可能量到 0：measure() 会把它
+      // 兜成 1，于是条会塌成 1px 宽 —— 看起来就像「显示原图时黑条没了」。
+      // 所以量不到时绝不动几何：保留上一次画好的条，补一次布局再回来。
+      if (!(bw > 1 && bh > 1)) {
+        // 已经画好过一条：保持原样就行 —— 新位图 load 时会再量一次，
+        // 不该在这里留一个每 60ms 自转的定时器（视口尺寸为 0 时会转个不停）。
+        if (this._markGeom) { m.hidden = false; return; }
+        // 一条都还没画出来：补测，但设上限，绝不让它变成无限重试
+        if (!this._markRetry && (this._markTries || 0) < 8) {
+          this._markTries = (this._markTries || 0) + 1;
+          this._markRetry = setTimeout(() => {
+            this._markRetry = null;
+            this.measure(); this.apply(false);
+          }, 60);
+        }
+        return;
+      }
+      // 上限 48px：再高就超出舞台为它预留的下边距，会压到工具条
+      const bar = Math.min(48, Math.max(22, Math.round(bh * 0.045)));
+      const fs = Math.max(11, Math.round(bar * 0.52));
+      m.hidden = false;
+      m.style.width = bw + "px";
+      m.style.height = bar + "px";
+      m.style.padding = "0 " + Math.round(bar * 0.3) + "px";
+      m.style.fontSize = fs + "px";
+      if (this.markT) this.markT.textContent = it.ai;
+      if (this.markNo) this.markNo.textContent = it.id || "";
+      m.style.transform = `translate3d(${this.tx + this.slide}px, ` +
+        `${this.ty + (bh / 2) * (this.s - 1)}px, 0) scale(${this.s})`;
+      this._markGeom = { w: bw, h: bar };
+      this._markTries = 0;
     },
 
     setRes(text, state) {
@@ -465,7 +684,12 @@
       // 版位必须跟最终尺寸一模一样，否则清晰图到位时画面会「长大一圈」。
       // 画布是 grid 居中、宽度收缩到内容，所以只能按可用宽高把宽度算出来写死。
       const it = this.items[this.idx] || {};
-      const ar = (it.fw && it.fh) ? it.fw / it.fh : 0;
+      // 版位按「即将到位的那一档」算：灯箱档出图尺寸。
+      // 黑条是 DOM，不参与位图尺寸，所以这里不再给它留高度 ——
+      // 但占位与清晰图必须同一比例，否则到位瞬间画面会「长大一圈」。
+      const lw = it.lw || it.fw || it.w;
+      const lh = it.lh || it.fh || it.h;
+      const ar = (lw && lh) ? lw / lh : 0;
       if (ar) {
         const cs = getComputedStyle(im);
         const ss = getComputedStyle(this.stage);
@@ -497,6 +721,12 @@
       this.sliding = false;
       this.slideBusy = false;
       this._pendingFull = null;
+      this._fullOn = false;
+      this._afterFull = null;
+      clearTimeout(this._markRetry); this._markRetry = null;
+      this._markGeom = null; this._markTries = 0;
+      if (this.markEl) this.markEl.hidden = true;
+      clearTimeout(this._prefT);
       this.hideLoad();
       const g = this.ghost;
       if (g) { g.hidden = true; g.removeAttribute("src"); g.classList.remove("is-slide"); }
@@ -515,6 +745,9 @@
       this.slideBusy = false;
       this._pendingFull = null;
       this.slide = 0;
+      clearTimeout(this._markRetry); this._markRetry = null;
+      this._markGeom = null; this._markTries = 0;
+      if (this.markEl) { this.markEl.hidden = true; this.markEl.className = "lb__mark"; }
       this.hideLoad();
       this.img.classList.remove("is-ph");
       this.ghost.hidden = true;
@@ -548,7 +781,11 @@
       const fullSrc = it.full && it.full !== it.large ? it.full : null;
       this._fullSrc = fullSrc;
       this._fullReady = false;
+      this._fullOn = false;
+      this._afterFull = null;
+      clearTimeout(this._prefT);
       this._shown = false;
+      this.setFullBtn();
 
       this.img.alt = it.title || "";
       const hit = this._cache.get(largeSrc);
@@ -590,24 +827,11 @@
       this.preloadNeighbors(i);
       }
 
-      // 原图（原始分辨率）随后接管，保证大图展示时是最清晰的版本
-      const resText = fullSrc ? "载入原图…" : `原图 · ${it.fw || it.w} × ${it.fh || it.h}`;
-      const resState = fullSrc ? "loading" : "ready";
-      if (fullSrc) {
-        const big = new Image();
-        big.onload = () => {
-          if (token !== this._token) return;
-          this._fullReady = true;
-          this.setRes(`原图 · ${big.naturalWidth} × ${big.naturalHeight}`, "ready");
-          // 画面已经铺开就地替换；还没铺开就等 next.onload 直接用原图
-          if (!this._shown) return;
-          if (this.slideBusy) { this._pendingFull = big.src; return; }
-          this.img.src = big.src;
-          requestAnimationFrame(() => { this.measure(); this.apply(false); });
-        };
-        big.onerror = () => { if (token === this._token) this.setRes("原图载入失败", "error"); };
-        big.src = fullSrc;
-      }
+      // 原图不再自动接管。灯箱档本身就是原分辨率（超大源按 VIEW_CAP 限幅），
+      // 原图只在按「原图」/O、或 1:1 真需要原始像素时才请求 ——
+      // 一张 8K 原图 3–5 MB，让每次翻页的人都替这张图付带宽，是这次改造要消掉的开销。
+      const resText = fullSrc ? this.resIdle(it) : `原图 · ${it.fw || it.w} × ${it.fh || it.h}`;
+      const resState = fullSrc ? "idle" : "ready";
 
       const rows = (cfg.rows ? cfg.rows(it) : []).filter(r => r && r[1] != null && r[1] !== "");
       const prompt = cfg.prompt ? cfg.prompt(it) : null;
@@ -627,6 +851,7 @@
           <button class="lb__prompt-t" type="button">展开</button></div>
         <pre class="lb__prompt is-clamped">${esc(prompt)}</pre>` : ""}`;
       this.info.scrollTop = 0;
+      this.syncMark();
     },
 
     togglePrompt(btn) {
@@ -732,19 +957,25 @@
       return e;
     },
 
-    /** 预取前后各一张（下一张优先，上一张次之） */
+    /** 预取分两级：左右两张的缩略图（几十 KB）立刻拿，翻页至少不空白；
+        灯箱档（几百 KB–1 MB）等用户停下来再预取；原图档永不预取 —— 那是显式动作。 */
     preloadNeighbors(i) {
       const n = this.items.length;
       if (n < 2) return;
       const at = k => this.items[(k + n) % n];
       const a = at(i + 1), b = at(i - 1);
-      this.preload(a.large || a.thumb);
-      setTimeout(() => this.preload(b.large || b.thumb), 60);
+      this.preload(a.thumb); this.preload(b.thumb);
+      clearTimeout(this._prefT);
+      this._prefT = setTimeout(() => {
+        if (performance.now() - (this._lastNav || 0) < 400) return;   // 还在连着翻，别抢带宽
+        this.preload(a.large || a.thumb);
+        setTimeout(() => this.preload(b.large || b.thumb), 120);
+      }, 650);
     },
 
-    /** 位图就绪后真正上屏：原图若先到就直接上原图，否则先上快图再替换 */
+    /** 位图就绪后真正上屏 */
     paintNext(it, next, hadPrev, prevSrc, dir, dx) {
-      const src = this._fullReady && this._fullSrc ? this._fullSrc : next.src;
+      const src = next.src;
       this._shown = true;
       this.hideLoad();
       // 占位图直接换成清晰图：不再重放淡入，模糊层自己会退掉

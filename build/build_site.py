@@ -10,9 +10,19 @@
   这三处路径带本机信息，不写进代码，放在 build/sources.local.json
   （已 gitignore，不入库；模板见 build/sources.example.json）。
 
-输出：
-  assets/img/<collection>/{t,l}_NNN.webp     缩略图 / 大图
-  assets/data/*.js                           window.__DATA_* 数据
+输出（三档，按「谁在什么时候付带宽」切）：
+  assets/img/<collection>/t_NNN.jpg   展墙缩略图：低清，滚动加载，字节越小越好
+  assets/img/<collection>/l_NNN.jpg   灯箱档：原分辨率 JPEG（q80），点开才拉
+  assets/img/<collection>/f_NNN.webp  原图档：原始分辨率 + 原始编码，只有按
+                                      「显示原图」或下载才请求
+  assets/data/*.js                     window.__DATA_* 数据
+
+AI 标识（《人工智能生成合成内容标识办法》2025-09-01 施行，配套 GB 45438-2025）：
+  显式 —— 在画面**下方外接一条黑条**写「AI 辅助生成」，不压在画面上，
+          做进 l_ 与 f_ 两档（展墙缩略图上放字不可读，故不加）；
+  隐式 —— EXIF 写 属性信息 / 服务提供者编码 / 内容编号。
+  只有真正含扩散模型输出的系列加条（见 AI_LABEL）；
+  「千禧迷思」「东方风背景图」是程序化合成，加了就是错误标注。
 """
 import os, re, json, glob, sys, time, shutil
 from PIL import Image
@@ -49,9 +59,33 @@ def _load_sources():
         if not os.path.isdir(path):
             raise SystemExit(f"源目录不存在：{name} -> {path}")
 
-LARGE_MAX, LARGE_Q = 1600, 86
-THUMB_MAX, THUMB_Q = 640, 76
-HD_MAX = 2200          # 8K 源的快图档：比普通快图高一档，又不甩原图
+# ---- 三档参数 -------------------------------------------------------------
+# 缩略图：展墙一格 CSS 宽约 290–400px（style.css 的 minmax(290px,1fr)），
+# 手机上单列约 335 CSS 像素、dpr2 要 670 —— 所以取 640 长边，够到 dpr≈1.9。
+THUMB_EXT, THUMB_MAX, THUMB_Q, THUMB_SUB = "jpg", 640, 70, 1
+# 灯箱档：默认原分辨率（1.0）。想要「80% 分辨率」而不是「80% 质量」，
+# 把 VIEW_SCALE 改成 0.8 即可，其余代码不用动。
+VIEW_EXT, VIEW_SCALE, VIEW_Q, VIEW_SUB = "jpg", 1.0, 80, 1
+# 原图档：原始分辨率 + 原始编码（WebP），只在按「原图」或下载时请求
+FULL_EXT = "webp"
+FULL_MIN_EDGE = 1600               # 画面长边 ≤ 这个数就不写 f_，灯箱档即原图
+# 灯箱档长边上限。探针实测：8K 源按原分辨率出 q80 JPEG 是 4.7–5.3 MB，
+# 5M 带宽下单张要 8–9 秒；限到 3000 后约 0.8–1.0 MB（1:1 细看会自动先取原图）。
+# 想严格按「原分辨率」出灯箱档，把这里改回 0。
+VIEW_CAP_EDGE = 3000
+TIER_REVISION = 3                  # 出图逻辑变了（不只是参数）就手动 +1，强制整批重出
+
+# ---- AI 标识 --------------------------------------------------------------
+# 显式标识（黑条）**不烧进图片**：构建端出干净像素，条由前端画在画面下方
+# （app.js 的 markEl + style.css 的 .lb__mark），下载时由 canvas 现场合成。
+# 于是：同一份文件既是作品原样；改字号字重配色只动 CSS，不用重编码 266 张图。
+EMBED_META = True                  # 隐式标识（EXIF）只写元数据，不动像素，保留
+AI_LABEL = {
+    "comfy": "AI 辅助生成 · 扩散模型",
+    "collage": None,               # 程序化合成，不含扩散模型输出
+    "bg": None,                    # 同上：Pillow / NumPy 渲染管线
+}
+PROVIDER_CODE = "TEWHAC-GALLERY"   # 隐式标识里的服务方编码；不含任何本机信息
 
 for d in (IMG, DATA):
     os.makedirs(d, exist_ok=True)
@@ -59,6 +93,15 @@ for d in (IMG, DATA):
 
 # 每个集合的「序号 → 源文件名」映射。文件一增一删，序号会整体平移，
 # 只按 mtime 判断就会把旧图当新图复用 —— 张冠李戴且不报错。
+# 参数指纹按档分组：只改缩略图尺寸时不该重烧 8K 的原图档（一次全量 10+ 分钟）。
+# 见 apply_param_revision —— _FORCE[tier] 为真时那一档整批重出。
+_META_KEYS = ("AI_LABEL", "PROVIDER_CODE", "EMBED_META", "TIER_REVISION")
+PARAM_GROUPS = {
+    "thumb": ("THUMB_EXT", "THUMB_MAX", "THUMB_Q", "THUMB_SUB"),
+    "view":  ("VIEW_EXT", "VIEW_SCALE", "VIEW_Q", "VIEW_SUB", "VIEW_CAP_EDGE") + _META_KEYS,
+    "full":  ("FULL_EXT", "FULL_MIN_EDGE") + _META_KEYS,
+}
+_FORCE = {"thumb": False, "view": False, "full": False}
 _MANIFEST = {}      # 磁盘上那份（只读，用于校验）
 _PENDING = {}       # 本轮新写进去的（保存时才合并）
 
@@ -98,11 +141,20 @@ def save_manifests():
 
 
 def prune_collection(coll, count):
-    """删掉序号超出现有条数的 t/l/f 产物（源文件被删后留下的孤儿）。"""
+    """删掉序号超出现有条数的产物（源文件被删后留下的孤儿），
+    以及旧的 {t,l}_*.webp —— 三档换格式以后，旧格式没人引用，留着只会让
+    「这张到底是哪档出的」再也答不出来。"""
     gone = 0
-    for path in glob.glob(os.path.join(IMG, coll, "*_*.webp")):
-        m = re.search(r"_([0-9]{3})\.webp$", path)
-        if m and int(m.group(1)) > count:
+    for path in glob.glob(os.path.join(IMG, coll, "*_*")):
+        name = os.path.basename(path)
+        m = re.match(r"^([tlf])_(\d{3})\.(webp|jpg|jpeg|png)$", name)
+        if not m:
+            continue
+        if m.group(1) in ("t", "l") and m.group(3) == "webp":
+            os.remove(path)          # 旧格式的缩略图/快图：迁移后一律删
+            gone += 1
+            continue
+        if int(m.group(2)) > count:
             os.remove(path)
             gone += 1
     # 映射表里超出条数的键也一并清掉
@@ -113,90 +165,188 @@ def prune_collection(coll, count):
     return gone
 
 
-def _done(path, src):
-    """产物算不算"已经生成好了"：存在、非空、且不比源文件旧。
+def _done(path, src, tier="full"):
+    """产物算不算"已经生成好了"：存在、非空、不比源文件旧，且**这一档**的参数没变。
     只看存在性会被一次中断的写入永久钉死 —— 0 字节的 webp 既跳过重建，
-    又能在 Pages 上返回 200，坏图就这么悄悄上线了。"""
+    又能在 Pages 上返回 200，坏图就这么悄悄上线了。
+    参数指纹那条更要紧：改了档位质量或黑条文案，文件名和 mtime 都不变，
+    没有它就会出现「代码改了、产物没改」——最难查的一种失败。"""
+    if _FORCE.get(tier):
+        return False
     return (os.path.exists(path) and os.path.getsize(path) > 0
             and os.path.getmtime(path) > os.path.getmtime(src))
 
 
+# 只列档位与黑条的参数。绝不把 SRC_* 写进指纹：params.json 会随站点发布，
+# 而源目录路径是「本站不含任何本地路径」这条约定里唯一还可能漏出去的东西。
+# 字体路径也不列（换机器就变），逻辑本身变了就手动 +1 TIER_REVISION。
+def _params_fingerprint():
+    """{档: {参数名: 值}}。绝不把 SRC_* 写进来：params.json 随站点发布，
+    而源目录路径是「本站不含任何本地路径」这条约定里唯一还可能漏出去的东西。
+    字体路径也不列（换机器就变）；出图逻辑本身变了就手动 +1 TIER_REVISION。"""
+    return {tier: {k: globals()[k] for k in keys} for tier, keys in PARAM_GROUPS.items()}
+
+
+def apply_param_revision():
+    """逐档比对参数指纹：哪一档变了就只重出那一档。
+
+    比较一律走 JSON 序列化后的字符串 —— 指纹里有元组（BAR_BG/BAR_FG），
+    json 存成数组、读回来是列表，直接比 dict 会永远不相等，
+    结果是每次构建都整批重编码（实测多烧 5 分钟且没人发现）。"""
+    p = os.path.join(IMG, "params.json")
+    old = None
+    if os.path.exists(p):
+        try:
+            old = json.load(open(p, encoding="utf-8"))
+        except Exception:
+            old = None
+    cur = _params_fingerprint()
+    norm = lambda o: json.dumps(o, sort_keys=True, ensure_ascii=False)
+    for tier, params in cur.items():
+        same = bool(old) and norm(old.get(tier)) == norm(params)
+        _FORCE[tier] = not same
+        if _FORCE[tier]:
+            print(f"  [{tier}] 参数与上次构建不同 → 这一档整批重出")
+    if not old:
+        print("  首次记录参数指纹")
+    return dict(_FORCE)
+
+
+def save_params():
+    with open(os.path.join(IMG, "params.json"), "w", encoding="utf-8") as fh:
+        json.dump(_params_fingerprint(), fh, ensure_ascii=False, indent=1, sort_keys=True)
+
+
+def _view_size(w, h):
+    """灯箱档出图尺寸：默认原分辨率，VIEW_CAP_EDGE 可设长边上限。"""
+    cap = int(max(w, h) * VIEW_SCALE)
+    if VIEW_CAP_EDGE:
+        cap = min(cap, VIEW_CAP_EDGE)
+    scale = min(1.0, cap / max(w, h))
+    return max(1, round(w * scale)), max(1, round(h * scale))
+
+
+# ---------------------------------------------------------------- AI 标识
+def ai_exif(label, no):
+    """隐式标识：属性信息 / 服务提供者编码 / 内容编号。绝不含本机路径。"""
+    ex = Image.Exif()
+    ex[0x010E] = (f"生成合成内容属性：{label}；服务提供者编码：{PROVIDER_CODE}；"
+                  f"内容编号：{no}")
+    ex[0x0131] = f"{PROVIDER_CODE} build_site"
+    return ex.tobytes()
+
+
 # ---------------------------------------------------------------- image utils
-def build_webp(src, coll, idx, large_src=None, force=False):
-    """生成 thumb/large 两档 webp，返回 (w, h, thumb_rel, large_rel)。"""
+def _rel(path):
+    return os.path.relpath(path, ROOT).replace(os.sep, "/")
+
+
+def _save_jpeg(im, path, q, sub, exif_bytes=None):
+    kw = dict(quality=q, optimize=True, progressive=True, subsampling=sub)
+    if exif_bytes:
+        kw["exif"] = exif_bytes
+    im.save(path, "JPEG", **kw)
+
+
+def _save_by_ext(im, path, q, sub, exif_bytes=None):
+    """按文件后缀选编码器 —— 否则 THUMB_EXT/VIEW_EXT 一改就变成
+    「把 JPEG 字节写成 .webp 文件名」，浏览器照样能猜着显示，但 CDN 与
+    Content-Type 全错，是最难查的那类静默错配。"""
+    ext = os.path.splitext(path)[1].lower()
+    if ext in (".jpg", ".jpeg"):
+        _save_jpeg(im, path, q, sub, exif_bytes)
+    elif ext == ".webp":
+        _save_webp(im, path, min(95, q + 6), 5, exif_bytes)
+    else:
+        raise SystemExit(f"不支持的档位格式：{ext}（{os.path.basename(path)}）")
+
+
+def _save_webp(im, path, q, method, exif_bytes=None):
+    kw = dict(quality=q, method=method)
+    if exif_bytes:
+        kw["exif"] = exif_bytes
+    im.save(path, "WEBP", **kw)
+
+
+def build_previews(src, coll, idx, force=False):
+    """缩略图档 + 灯箱档。返回 (画面w, 画面h, rel_t, rel_l, 灯箱档w, 灯箱档h)。
+
+    出的是干净像素：AI 黑条由前端画在画面下方，下载时才用 canvas 合成。"""
     out_dir = os.path.join(IMG, coll)
     os.makedirs(out_dir, exist_ok=True)
-    t_path = os.path.join(out_dir, f"t_{idx:03d}.webp")
-    l_path = os.path.join(out_dir, f"l_{idx:03d}.webp")
-    rel_t = f"assets/img/{coll}/t_{idx:03d}.webp"
-    rel_l = f"assets/img/{coll}/l_{idx:03d}.webp"
+    label = AI_LABEL.get(coll)
+    no = f"{coll[0]}{idx:03d}"
+    t_path = os.path.join(out_dir, f"t_{idx:03d}.{THUMB_EXT}")
+    l_path = os.path.join(out_dir, f"l_{idx:03d}.{VIEW_EXT}")
+    rel_t, rel_l = _rel(t_path), _rel(l_path)
 
-    if not force and _mapped(coll, idx, src) and _done(t_path, src) and _done(l_path, src):
+    if not force and _mapped(coll, idx, src) and _done(t_path, src, "thumb") \
+            and _done(l_path, src, "view"):
         with Image.open(src) as im:
             w, h = im.size
-        return w, h, rel_t, rel_l
+        # 灯箱档尺寸从**产物本身**读，不按常数回推：常数回推会在
+        # 「产物是旧参数出的」时谎报，数据就对不上文件了。
+        with Image.open(l_path) as lim:
+            return w, h, rel_t, rel_l, lim.size[0], lim.size[1]
 
     with Image.open(src) as im:
         im = im.convert("RGB")
         w, h = im.size
-        large = im.copy()
-        large.thumbnail((LARGE_MAX, LARGE_MAX), Image.LANCZOS)
-        large.save(l_path, "WEBP", quality=LARGE_Q, method=5)
+        # 灯箱档：原分辨率（VIEW_SCALE=1.0）JPEG；超大的源可选设长边上限
+        view = im.copy()
+        vw, vh = _view_size(w, h)
+        if (vw, vh) != (w, h):
+            view.thumbnail((vw, vh), Image.LANCZOS)
+        _save_by_ext(view, l_path, VIEW_Q, VIEW_SUB,
+                     ai_exif(label, no) if (label and EMBED_META) else None)
         thumb = im.copy()
         thumb.thumbnail((THUMB_MAX, THUMB_MAX), Image.LANCZOS)
-        thumb.save(t_path, "WEBP", quality=THUMB_Q, method=5)
+        _save_by_ext(thumb, t_path, THUMB_Q, THUMB_SUB)
     _mark(coll, idx, src)
-    return w, h, rel_t, rel_l
+    return w, h, rel_t, rel_l, vw, vh
 
 
 def build_full(src, coll, idx, force=False):
-    """原图分辨率（不缩放）的一档，供灯箱使用。返回 (rel, w, h)。"""
+    """原图档：原始分辨率 + 原始编码，干净像素。返回 (rel, w, h)。"""
     out_dir = os.path.join(IMG, coll)
     os.makedirs(out_dir, exist_ok=True)
-    f_path = os.path.join(out_dir, f"f_{idx:03d}.webp")
-    rel = f"assets/img/{coll}/f_{idx:03d}.webp"
+    label = AI_LABEL.get(coll)
+    no = f"{coll[0]}{idx:03d}"
+    f_path = os.path.join(out_dir, f"f_{idx:03d}.{FULL_EXT}")
+    rel = _rel(f_path)
     with Image.open(src) as im:
         im = im.convert("RGB")
         w, h = im.size
-        if not force and _mapped(coll, idx, src) and _done(f_path, src):
+        if not force and _mapped(coll, idx, src) and _done(f_path, src, "full"):
             return rel, w, h
         big = max(w, h) > 3000
-        im.save(f_path, "WEBP", quality=(88 if big else 90), method=(4 if big else 5))
+        _save_webp(im, f_path, (88 if big else 90), (4 if big else 5),
+                   ai_exif(label, no) if (label and EMBED_META) else None)
     _mark(coll, idx, src)
     return rel, w, h
 
 
 def build_full_copy(src, coll, idx):
-    """源本身已经是压好的网络格式（JPEG/WebP）且就是目标分辨率时，直接复制。
-    再编码一次就是第二代损失，白掉画质。返回 (rel, w, h)。"""
+    """源本身已经是压好的网络格式且就是目标分辨率：按字节复制。
+    重新编码就是第二代损失 —— 8000×8000 的卡面再 q95 压一次尤其亏。
+
+    复制前先探一眼元数据：相机与工具链的 EXIF/XMP 里常带本机路径，
+    而「本站不含任何本地路径」是硬约定。这类文件一旦出现在源目录，
+    宁可当场报错（只报文件名，不报路径）也不要悄悄把它发出去。"""
     out_dir = os.path.join(IMG, coll)
     os.makedirs(out_dir, exist_ok=True)
     ext = os.path.splitext(src)[1].lstrip(".").lower()
     f_path = os.path.join(out_dir, f"f_{idx:03d}.{ext}")
-    rel = f"assets/img/{coll}/f_{idx:03d}.{ext}"
-    if not _mapped(coll, idx, src) or not _done(f_path, src) \
-            or os.path.getsize(f_path) != os.path.getsize(src):
-        shutil.copyfile(src, f_path)
+    rel = _rel(f_path)
     with Image.open(src) as im:
         w, h = im.size
-    return rel, w, h
-
-
-def build_large_only(src, coll, idx, force=False):
-    """仅用高分辨率源（8K）出大图，缩略图沿用已有。"""
-    out_dir = os.path.join(IMG, coll)
-    l_path = os.path.join(out_dir, f"l_{idx:03d}.webp")
-    # 不能只看 mtime：build_webp 前一步刚写过同名文件，mtime 必然更新，
-    # 那样这一档会永远停在 1600，8K 系列升不到 2200。要按实际尺寸判。
-    if not force and _done(l_path, src):
-        with Image.open(l_path) as im:
-            if max(im.size) >= HD_MAX:
-                return f"assets/img/{coll}/l_{idx:03d}.webp"
-    with Image.open(src) as im:
-        im = im.convert("RGB")
-        im.thumbnail((HD_MAX, HD_MAX), Image.LANCZOS)
-        im.save(l_path, "WEBP", quality=88, method=5)
-    return f"assets/img/{coll}/l_{idx:03d}.webp"
+        if im.getexif() or im.info.get("xmp"):
+            raise SystemExit(f"源文件带 EXIF/XMP 元数据，可能含本机路径，先清掉再发布："
+                             f"{os.path.basename(src)}")
+    if not _mapped(coll, idx, src) or not _done(f_path, src, "full") \
+            or os.path.getsize(f_path) != os.path.getsize(src):
+        shutil.copyfile(src, f_path)
+    return rel, w, h, 0
 
 
 # ------------------------------------------------------- A. ComfyUI 元数据
@@ -526,12 +676,13 @@ def classify_theme(scene, prompt):
 
 
 def build_comfy():
+    label = AI_LABEL.get("comfy")
     rows = parse_overview()
     files = sorted(f for f in os.listdir(SRC_COMFY) if f.lower().endswith(".png"))
     items = []
     for i, f in enumerate(files, 1):
         src = os.path.join(SRC_COMFY, f)
-        w, h, t, l = build_webp(src, "comfy", i)
+        w, h, t, l, lw, lh = build_previews(src, "comfy", i)
         fp, fw, fh = build_full(src, "comfy", i)
         meta = comfy_prompt_meta(src)
         row = rows.get(f, {})
@@ -541,6 +692,7 @@ def build_comfy():
         items.append({
             "id": f"c{i:03d}", "file": f, "title": title, "stem": stem,
             "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh,
+            "ai": label, "lw": lw, "lh": lh,
             "version": row.get("version", "未归档"),
             "scene": scene, "seed": meta.get("seed") or row.get("seed"),
             "steps": meta.get("steps") or row.get("steps"),
@@ -624,21 +776,26 @@ COLLAGE_FRAMES = [
 
 
 def build_collage():
+    label = AI_LABEL.get("collage")
     items = []
     for i, (f, f8, title, anchor, band, vert, emo, bottom, seal, score) in enumerate(COLLAGE_FRAMES, 1):
         src = os.path.join(SRC_COLLAGE, f)
-        w, h, t, l = build_webp(src, "collage", i)
-        big = os.path.join(SRC_COLLAGE, f8)
-        fp, fw, fh = l, w, h
-        if os.path.exists(big):
-            l = build_large_only(big, "collage", i, force=True)
-            fp, fw, fh = build_full(big, "collage", i)
+        src8 = os.path.join(SRC_COLLAGE, f8)
+        # 有 8K 源就从 8K 一次出三档：以前是「小图出预览 + 8K 补大图」两条路，
+        # 现在灯箱档本身就是原分辨率，分两头只会让同系列出现两种清晰度。
+        psrc = src8 if os.path.exists(src8) else src
+        w, h, t, l, lw, lh = build_previews(psrc, "collage", i)
+        if max(w, h) <= FULL_MIN_EDGE:
+            fp, fw, fh = l, w, h      # 原图就是灯箱档，不再写一份没人引用的 f_
+        else:
+            fp, fw, fh = build_full(psrc, "collage", i)
         items.append({
             "id": f"k{i:02d}", "file": f, "title": title, "stem": f"第 {i:02d} 帧",
             "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh,
+            "ai": label, "lw": lw, "lh": lh,
             "anchor": anchor, "band": band, "vertical": vert,
             "emotion": emo, "bottom": bottom, "seal": seal, "score": score,
-            "big": "5312 × 8704",
+            "big": f"{fw} × {fh}",
         })
         print(f"  collage {i}/6 {f}", flush=True)
 
@@ -646,11 +803,14 @@ def build_collage():
     extra = []
     proc = os.path.join(SRC_COLLAGE, "流程复刻.png")
     if os.path.exists(proc):
-        w, h, t, l = build_webp(proc, "collage", 90)
-        fp, fw, fh = build_full(proc, "collage", 90)
+        w, h, t, l, lw, lh = build_previews(proc, "collage", 90)
+        if max(w, h) <= FULL_MIN_EDGE:
+            fp, fw, fh = l, w, h
+        else:
+            fp, fw, fh = build_full(proc, "collage", 90)
         extra.append({"id": "k90", "file": "流程复刻.png", "title": "層序復刻",
                       "stem": "渲染顺序对照", "thumb": t, "large": l, "full": fp, "w": w, "h": h,
-                      "fw": fw, "fh": fh})
+                      "fw": fw, "fh": fh, "ai": label, "lw": lw, "lh": lh})
     return {"items": items, "extra": extra}
 
 
@@ -695,6 +855,7 @@ SERIES_ORDER = ["layout", "birthday", "bg20b", "bg20c", "covers"]
 
 
 def build_backgrounds():
+    label = AI_LABEL.get("bg")
     series = []
     idx = 0
     for s in BG_SERIES:
@@ -713,13 +874,14 @@ def build_backgrounds():
             op = os.path.join(SRC_BG, s["dir"], s["overview"]) if s["dir"] else os.path.join(SRC_BG, s["overview"])
             if os.path.exists(op):
                 idx += 1
-                w, h, t, l = build_webp(op, "bg", idx)
-                if max(w, h) <= LARGE_MAX:
-                    fp, fw, fh = l, w, h      # 快图即原图，不再写一份没人引用的 f_
+                w, h, t, l, lw, lh = build_previews(op, "bg", idx)
+                if max(w, h) <= FULL_MIN_EDGE:
+                    fp, fw, fh = l, w, h   # 灯箱档即原图，不再写一份没人引用的 f_
                 else:
                     fp, fw, fh = build_full(op, "bg", idx)
                 ov = {"id": f"g{idx:03d}", "title": "系列总览", "thumb": t, "large": l,
-                      "full": fp, "w": w, "h": h, "fw": fw, "fh": fh, "file": s["overview"]}
+                      "full": fp, "w": w, "h": h, "fw": fw, "fh": fh,
+                      "ai": label, "lw": lw, "lh": lh, "file": s["overview"]}
         # 成品卡（带标题）排在同组纯背景前面。两边文件名同名，靠 kind 区分。
         if s.get("cards"):
             cdir = os.path.join(SRC_BG, s["cards"])
@@ -730,36 +892,36 @@ def build_backgrounds():
             for f in cfiles:
                 idx += 1
                 p = os.path.join(cdir, f)
-                w, h, t, l = build_webp(p, "bg", idx)
-                fp, fw, fh = build_full_copy(p, "bg", idx)   # 他压好的 JPG，直接复制不再编码
+                w, h, t, l, lw, lh = build_previews(p, "bg", idx)
+                fp, fw, fh = build_full_copy(p, "bg", idx)   # 他压好的 JPG：复制且不落元数据
                 card = {"id": f"g{idx:03d}", "file": f,
                         "title": _t2s(re.sub(r"_compressed$", "", os.path.splitext(f)[0])),
                         "thumb": t, "large": l, "full": fp,
                         "w": w, "h": h, "fw": fw, "fh": fh,
+                        "ai": label, "lw": lw, "lh": lh,
                         "kind": "成品卡面", "badge": "成品"}
-                if s.get("hd") and max(w, h) > 2000:          # 卡与纯背景同画幅，快图同档
-                    card["large"] = build_large_only(p, "bg", idx)
+                if max(w, h) > FULL_MIN_EDGE:
                     card["big"] = f"{w} × {h}"
                 items.append(card)
                 print(f"  bg {s['key']} 卡面 {len(items)}/{len(cfiles)} {f}", flush=True)
         for f in files:
             idx += 1
             p = os.path.join(SRC_BG, s["dir"], f) if s["dir"] else os.path.join(SRC_BG, f)
-            w, h, t, l = build_webp(p, "bg", idx)
+            w, h, t, l, lw, lh = build_previews(p, "bg", idx)
             title = re.sub(r"\.png$", "", f)
             title = title.replace("birthday_", "").replace("_背景", "")
             title = _t2s(title)
-            if max(w, h) <= LARGE_MAX:
-                fp, fw, fh = l, w, h        # 原图本身就不大，快图即原图，不再写一份 f_
+            if max(w, h) <= FULL_MIN_EDGE:
+                fp, fw, fh = l, w, h    # 原图本身就不大，灯箱档即原图
             else:
                 fp, fw, fh = build_full(p, "bg", idx)
             item = {"id": f"g{idx:03d}", "file": f, "title": title,
-                    "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh}
+                    "thumb": t, "large": l, "full": fp, "w": w, "h": h, "fw": fw, "fh": fh,
+                    "ai": label, "lw": lw, "lh": lh}
             if s.get("cards"):
                 item["kind"] = "纯背景"     # 与前面的成品卡对照
-            # 8K 版：用高分辨率源替换大图
-            if s.get("hd") and max(w, h) > 2000:
-                item["large"] = build_large_only(p, "bg", idx)
+            # 8K 原生渲染的：灯箱档已经是原分辨率，只需把画幅告诉读者
+            if s.get("hd") and max(w, h) > FULL_MIN_EDGE:
                 item["big"] = f"{w} × {h}"
             items.append(item)
             print(f"  bg {s['key']} {len(items)}/{len(files)} {f}", flush=True)
@@ -779,10 +941,63 @@ def emit(name, obj):
     print(f"  -> {p}  ({os.path.getsize(p)/1024:.0f} KB)")
 
 
+def probe(n=2):
+    """便宜探针：只重出几张的三档，量字节、量耗时，不整批重跑。
+    搜到想要的参数再烧全量，比整批试错便宜得多。"""
+    _load_sources()
+    global IMG
+    IMG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "probe")
+    out = []
+
+    def one(tag, src, coll, idx):
+        t0 = time.time()
+        w, h, rel_t, rel_l, vw, vh = build_previews(src, coll, idx, force=True)
+        if max(w, h) <= FULL_MIN_EDGE:
+            rel_f, fw, fh = rel_l, w, h
+        else:
+            rel_f, fw, fh = build_full(src, coll, idx, force=True)
+        sz = lambda r: os.path.getsize(os.path.join(ROOT, r)) / 1024
+        out.append((tag, f"{w}×{h}", sz(rel_t), sz(rel_l), sz(rel_f),
+                    f"{vw}×{vh}", f"{fw}×{fh}", time.time() - t0))
+
+    files = sorted(f for f in os.listdir(SRC_COMFY) if f.lower().endswith(".png"))
+    for i, f in enumerate(files[:n], 1):
+        one(f"comfy{i:02d}", os.path.join(SRC_COMFY, f), "comfy", i)
+    c8 = os.path.join(SRC_COLLAGE, COLLAGE_FRAMES[0][1])
+    if os.path.exists(c8):
+        one("coll8k", c8, "collage", 1)
+    lay = os.path.join(SRC_BG, "新排布六类")
+    if os.path.isdir(lay):
+        big = sorted(glob.glob(os.path.join(lay, "*.png")))
+        if big:
+            one("bg8k", big[0], "bg", 1)
+
+    print(f"\n{'档':9} {'画面':11} {'缩略KB':>8} {'灯箱KB':>8} {'原图KB':>8} {'灯箱出图':>12} {'原图出图':>12} {'秒':>6}")
+    for tag, dim, t, l, fp, vd, fd, dt in out:
+        print(f"{tag:9} {dim:11} {t:8.0f} {l:8.0f} {fp:8.0f} {vd:>12} {fd:>12} {dt:6.1f}")
+
+
+def purge_legacy():
+    """三档换格式之后，旧的 {t,l}_*.webp 不再被任何数据引用。
+    留着不会报错，但半年后没人答得出「这张是哪一批出的」—— 一次改格式的
+    残留比一张坏图更难查。f_ 档仍是 webp，不在清理范围。"""
+    gone = 0
+    for coll in ("comfy", "collage", "bg"):
+        for path in glob.glob(os.path.join(IMG, coll, "[tl]_*.webp")):
+            os.remove(path)
+            gone += 1
+    return gone
+
+
 def main():
     t0 = time.time()
     _load_sources()
     only = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if only != "probe":
+        apply_param_revision()
+    if only == "probe":
+        probe(int(sys.argv[2]) if len(sys.argv) > 2 else 2)
+        return
     if only in ("all", "comfy"):
         print("[A] ComfyUI 系列")
         emit("comfy", build_comfy())
@@ -792,7 +1007,9 @@ def main():
     if only in ("all", "bg"):
         print("[C] 纯背景")
         emit("bg", build_backgrounds())
+    print(f"  清理旧格式产物 {purge_legacy()} 个")
     save_manifests()
+    save_params()
     print(f"done in {time.time()-t0:.1f}s")
 
 
