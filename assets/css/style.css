@@ -530,7 +530,7 @@ body::before {
 .filters button {
   font-family: inherit; font-size: 11px; letter-spacing: .06em;
   color: var(--muted); background: transparent;
-  border: 1px solid var(--line-2); padding: 4px 9px; cursor: pointer;
+  border: 1px solid var(--line-2); padding: 6px 10px; cursor: pointer;
   transition: all .22s;
 }
 .filters button:hover { color: var(--ink); border-color: var(--line-2); background: rgba(255,255,255,.03); }
@@ -899,18 +899,20 @@ body.theme-collage .wall { --min: 168px; }
 
   /* 灯箱：竖屏铺满，工具条贴底 */
   .lb { grid-template-rows: 1fr auto; }
-  .lb__stage { padding: 12px 8px calc(72px + var(--mark-pad)); }
-  .lb__stage img { max-height: calc(62svh - 30px - var(--mark-pad)); }
-  /* 手机上工具条按钮更高、还会换行成两排，黑条要留得更深 */
-  .lb.has-mark { --mark-pad: 96px; }
+  .lb__stage { padding: 12px 8px calc(96px + var(--mark-pad)); }
+  .lb__stage img { max-height: calc(62svh - 74px - var(--mark-pad)); }
+  /* 手机上工具条收成一行（见下方 .lb__tools），留白只要装得下黑条 48 + 一点余量 */
+  .lb.has-mark { --mark-pad: 64px; }
   .lb__info { max-height: 34svh; padding: 18px 16px 26px; }
   .lb__title { font-size: 21px; }
   .lb__nav { width: 36px; height: 36px; font-size: 14px; }
   .lb__nav.prev { left: 4px; }
   .lb__nav.next { right: 4px; }
-  .lb__tools { bottom: 12px; padding: 3px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 20px); }
-  .lb__tools button { min-width: 40px; height: 38px; font-size: 13px; }
-  .lb__tools .pct { min-width: 58px; }
+  .lb__tools { bottom: 12px; padding: 3px; flex-wrap: wrap; justify-content: center; gap: 0; max-width: calc(100% - 16px); }
+  .lb__tools button { min-width: 34px; height: 34px; padding: 0 6px; font-size: 12px; }
+  .lb__tools .pct { min-width: 44px; }
+  /* 分隔竖线在手机上是第 9、10 个「项」，正是它把八个按钮挤成三行的 */
+  .lb__tools .lb__sep { display: none; }
     .lb__close, .lb__info-btn { width: 34px; height: 34px; top: 10px; }
   .lb__close { right: 10px; }
   .lb__info-btn { right: 50px; }

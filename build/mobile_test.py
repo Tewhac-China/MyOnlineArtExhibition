@@ -2,8 +2,15 @@
 """竖屏（390×844）自测：用 iframe 把页面装进真实 390px 视口，父页读结果。"""
 import subprocess, os, re, html as H, sys
 
-EDGE = r"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 别再指 msedge：这台机上它的 CLI 0.07 秒就退，--dump-dom / --screenshot 恒 0 字节，
+# 于是这个 harness 一直是「NO OUTPUT」而不是真的测过。
+# Playwright 缓存里的 headless shell 在同一组参数下能给出真实视口（390×844 量到布局），
+# 找浏览器的逻辑与 visual_check.py 共用一份。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from visual_check import find_browser
+EDGE = find_browser()
+PROFILE = os.path.join(ROOT, ".preview", "_prof")
 
 HARNESS = """<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>html,body{margin:0;background:#111}iframe{width:390px;height:844px;border:0;display:block}</style>
@@ -81,8 +88,10 @@ def run(page):
     html = html.replace("</head>", "<script>window.ERRS=[];window.onerror=function(m){ERRS.push(m)};</script></head>")
     open(os.path.join(ROOT, "_m_" + page), "w", encoding="utf-8").write(html)
     open(os.path.join(ROOT, "_h.html"), "w", encoding="utf-8").write(HARNESS.replace("__SRC__", "_m_" + page))
+    os.makedirs(PROFILE, exist_ok=True)
     out = subprocess.run(
-        [EDGE, "--headless=new", "--disable-gpu", "--force-device-scale-factor=1",
+        [EDGE, "--headless", "--no-sandbox", "--disable-gpu", "--disk-cache-size=1",
+         f"--user-data-dir={PROFILE}", "--force-device-scale-factor=1",
          "--allow-file-access-from-files", "--window-size=420,900",
          "--virtual-time-budget=30000", "--dump-dom",
          "file:///" + os.path.join(ROOT, "_h.html").replace("\\", "/")],

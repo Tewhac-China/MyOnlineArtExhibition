@@ -2,8 +2,13 @@
 """GUI 自测：把测试脚本注入页面，headless 跑一遍，把结果写进 <pre id="T">。"""
 import subprocess, os, sys, re, json, html as htmlmod
 
-EDGE = r"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# msedge 在这台机上不肯以 headless 出图（进程 0.07 秒退、输出 0 字节），
+# 改指 Playwright 缓存里的 headless shell；与 mobile_test.py / visual_check.py 同源。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from visual_check import find_browser
+EDGE = find_browser()
+PROFILE = os.path.join(ROOT, ".preview", "_prof")
 
 COMMON = r"""
 var R=[];
@@ -215,8 +220,10 @@ def run(page, script, w=1440, h=900, extra_flags=()):
     html = html.replace("</body>", "<script>" + COMMON + script + "</script></body>")
     tmp = os.path.join(ROOT, "_t.html")
     open(tmp, "w", encoding="utf-8").write(html)
+    os.makedirs(PROFILE, exist_ok=True)
     out = subprocess.run(
-        [EDGE, "--headless=new", "--disable-gpu", "--force-device-scale-factor=1",
+        [EDGE, "--headless", "--no-sandbox", "--disable-gpu", "--disk-cache-size=1",
+         f"--user-data-dir={PROFILE}", "--force-device-scale-factor=1",
          f"--window-size={w},{h}", "--virtual-time-budget=30000", "--dump-dom",
          *extra_flags, "file:///" + tmp.replace("\\", "/")],
         capture_output=True, text=True, encoding="utf-8", errors="replace")

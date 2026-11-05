@@ -190,8 +190,9 @@ def _params_fingerprint():
 def apply_param_revision():
     """逐档比对参数指纹：哪一档变了就只重出那一档。
 
-    比较一律走 JSON 序列化后的字符串 —— 指纹里有元组（BAR_BG/BAR_FG），
-    json 存成数组、读回来是列表，直接比 dict 会永远不相等，
+    比较一律走 JSON 序列化后的字符串 —— 指纹里既有元组也有字典（历史上的
+    BAR_BG/BAR_FG、现在的 AI_LABEL），json 存成数组、读回来是列表，
+    直接比 dict 会永远不相等，
     结果是每次构建都整批重编码（实测多烧 5 分钟且没人发现）。"""
     p = os.path.join(IMG, "params.json")
     old = None
@@ -346,7 +347,7 @@ def build_full_copy(src, coll, idx):
     if not _mapped(coll, idx, src) or not _done(f_path, src, "full") \
             or os.path.getsize(f_path) != os.path.getsize(src):
         shutil.copyfile(src, f_path)
-    return rel, w, h, 0
+    return rel, w, h
 
 
 # ------------------------------------------------------- A. ComfyUI 元数据
@@ -933,11 +934,25 @@ def build_backgrounds():
 
 
 # ---------------------------------------------------------------- emit
+_BUILT = []            # 本次真正重建了哪几个系列（清理只针对它们）
+_REFS = {}             # 系列 -> 数据里引用到的文件名
+
+
+def _items_of(obj):
+    got = obj.get("items")
+    if got is None:
+        got = [i for s in obj.get("series", []) for i in s.get("items", [])]
+    return got
+
+
 def emit(name, obj):
     p = os.path.join(DATA, f"{name}.js")
     js = "window.__DATA_" + name.upper() + " = " + json.dumps(obj, ensure_ascii=False) + ";\n"
     with open(p, "w", encoding="utf-8") as fh:
         fh.write(js)
+    _BUILT.append(name)
+    _REFS[name] = {os.path.basename(it[k]) for it in _items_of(obj)
+                   for k in ("thumb", "large", "full") if it.get(k)}
     print(f"  -> {p}  ({os.path.getsize(p)/1024:.0f} KB)")
 
 
@@ -977,15 +992,21 @@ def probe(n=2):
         print(f"{tag:9} {dim:11} {t:8.0f} {l:8.0f} {fp:8.0f} {vd:>12} {fd:>12} {dt:6.1f}")
 
 
-def purge_legacy():
-    """三档换格式之后，旧的 {t,l}_*.webp 不再被任何数据引用。
-    留着不会报错，但半年后没人答得出「这张是哪一批出的」—— 一次改格式的
-    残留比一张坏图更难查。f_ 档仍是 webp，不在清理范围。"""
-    gone = 0
-    for coll in ("comfy", "collage", "bg"):
-        for path in glob.glob(os.path.join(IMG, coll, "[tl]_*.webp")):
-            os.remove(path)
-            gone += 1
+def purge_orphans():
+    """删掉本次重建系列里、没有任何数据引用的图片。
+
+    规则要通用：换格式、重排、删作品都会留下这种孤儿文件（上次改 JPEG 就剩了
+    11 个跨序号同名的旧扩展名产物）。它们不会报错，只会让仓库越滚越胖，
+    而且半年后没人答得出「这张是哪一批出的」。
+    只清理本次真正重建过的系列，跑单组时不会误删另外两组的图。"""
+    gone = []
+    for coll in _BUILT:
+        keep = _REFS.get(coll, set())
+        for ext in ("jpg", "webp", "png"):
+            for path in glob.glob(os.path.join(IMG, coll, f"[tlf]_*.{ext}")):
+                if os.path.basename(path) not in keep:
+                    os.remove(path)
+                    gone.append(os.path.basename(path))
     return gone
 
 
@@ -1007,7 +1028,8 @@ def main():
     if only in ("all", "bg"):
         print("[C] 纯背景")
         emit("bg", build_backgrounds())
-    print(f"  清理旧格式产物 {purge_legacy()} 个")
+    gone = purge_orphans()
+    print(f"  清理未被引用的产物 {len(gone)} 个" + (f"：{', '.join(gone[:6])}" if gone else ""))
     save_manifests()
     save_params()
     print(f"done in {time.time()-t0:.1f}s")

@@ -1,0 +1,35 @@
+{
+ "full": {
+  "AI_LABEL": {
+   "bg": null,
+   "collage": null,
+   "comfy": "AI 辅助生成 · 扩散模型"
+  },
+  "EMBED_META": true,
+  "FULL_EXT": "webp",
+  "FULL_MIN_EDGE": 1600,
+  "PROVIDER_CODE": "TEWHAC-GALLERY",
+  "TIER_REVISION": 3
+ },
+ "thumb": {
+  "THUMB_EXT": "jpg",
+  "THUMB_MAX": 640,
+  "THUMB_Q": 70,
+  "THUMB_SUB": 1
+ },
+ "view": {
+  "AI_LABEL": {
+   "bg": null,
+   "collage": null,
+   "comfy": "AI 辅助生成 · 扩散模型"
+  },
+  "EMBED_META": true,
+  "PROVIDER_CODE": "TEWHAC-GALLERY",
+  "TIER_REVISION": 3,
+  "VIEW_CAP_EDGE": 3000,
+  "VIEW_EXT": "jpg",
+  "VIEW_Q": 80,
+  "VIEW_SCALE": 1.0,
+  "VIEW_SUB": 1
+ }
+}

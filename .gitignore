@@ -20,3 +20,8 @@ desktop.ini
 build/probe/
 build/probe_bar_*.png
 build/_*.log
+
+# harness 跑完后自删的临时页；中途失败会留下，别让它混进发布
+/_h.html
+/_m_*.html
+/_t.html
